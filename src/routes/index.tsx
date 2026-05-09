@@ -49,8 +49,22 @@ function Index() {
     setOnline(status);
     if (status) {
       toast.success("You are now online! 🟢");
+      // Simulate incoming order after 3 seconds
+      setTimeout(() => {
+        setIncomingOrder({
+          id: "ord-123",
+          items: ["Masala Maggi Cup", "Cold Coffee"],
+          earnings: 35,
+          exp: 50,
+          pickupLocation: "Hostel Canteen",
+          pickupDistance: "200m",
+          dropoffLocation: "Room 402, Block B",
+          dropoffDistance: "500m",
+          eta: "9 min"
+        });
+      }, 3000);
     } else {
-      toast.info("You are now offline");
+      setIncomingOrder(null);
     }
   };
 
@@ -108,7 +122,18 @@ function Index() {
             }}
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
-          <span className="rounded-lg bg-brand px-2 py-0.5 text-[10px] font-bold text-brand-foreground">⚡ 10m</span>
+          <button
+            onClick={() => {
+              if (searchQuery.trim()) {
+                nav({ to: "/store" });
+                toast.info(`Searching for "${searchQuery}"...`);
+              }
+            }}
+            className="flex items-center justify-center rounded-lg bg-brand p-1.5 text-brand-foreground transition-transform active:scale-95"
+            aria-label="Search"
+          >
+            <Search className="h-4 w-4" strokeWidth={2.5} />
+          </button>
         </div>
       </div>
 
@@ -263,14 +288,14 @@ function Index() {
         <div className="flex items-end justify-between">
           <div>
             <h2 className="text-base font-bold md:text-2xl">Live near you</h2>
-            <p className="text-[11px] text-muted-foreground md:text-sm">Students online · ready to lend or buy</p>
+            <p className="text-[11px] text-muted-foreground md:text-sm">Students online · ready to lend</p>
           </div>
           <Link to="/lend" className="text-xs font-semibold text-primary md:text-sm">Open feed</Link>
         </div>
         <div className="mt-3 grid gap-2.5 md:grid-cols-2 md:gap-4">
           {lendItems.slice(0, 3).map((l) => (
             <Link
-              to="/lend-item/$id"
+              to="/lend/$id"
               params={{ id: l.id }}
               key={l.id}
               className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-card"
@@ -290,7 +315,7 @@ function Index() {
                         : "bg-warning/20 text-warning-foreground"
                     }`}
                   >
-                    {l.tag === "Lend" ? "LENDING" : "BUYING"}
+                    {l.tag === "Lend" ? "LENDING" : "NEEDS"}
                   </span>
                   <span className="text-[10px] text-muted-foreground">{l.posted}</span>
                 </div>
