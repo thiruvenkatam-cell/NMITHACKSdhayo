@@ -16,33 +16,18 @@ function Profile() {
     { icon: "📦", label: "My orders", sub: "12 completed", link: "/orders" },
     { icon: "🤝", label: "My lendings", sub: "5 active", link: "/lend" },
     { icon: "🏆", label: "Leaderboard", sub: "Rank #8", link: "/leaderboard" },
-    { icon: "⭐", label: "Reviews & ratings", sub: "4.9 average", link: null },
+    { icon: "⭐", label: "Reviews & ratings", sub: "4.9 average", link: "/" },
     { icon: "🔔", label: "Notifications", sub: "3 unread", link: "/notifications" },
-    { icon: "❓", label: "Help & safety", sub: "24/7 campus support", link: null },
+    { icon: "❓", label: "Help & safety", sub: "24/7 campus support", link: "/" },
   ];
 
   const handleGoLive = () => {
-    // Determine the next state
-    const nextStatus = !isOnline;
-    setOnline(nextStatus);
-    
-    if (nextStatus) {
+    // Simply toggle online status. Real orders will come via socket.
+    setOnline(!isOnline);
+    if (!isOnline) {
       toast.success("You are now online! 🚴");
-      setTimeout(() => {
-        setIncomingOrder({
-          id: "ord-124",
-          items: ["Calculator", "Lab Coat"],
-          earnings: 15,
-          exp: 20,
-          pickupLocation: "Library Block",
-          pickupDistance: "100m",
-          dropoffLocation: "Lab 2, ECE Dept",
-          dropoffDistance: "300m",
-          eta: "5 min"
-        });
-      }, 3000);
     } else {
-      setIncomingOrder(null);
+      toast.info("You are now offline");
     }
   };
 

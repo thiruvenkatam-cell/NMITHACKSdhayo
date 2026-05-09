@@ -35,7 +35,7 @@ def accept_order():
         return jsonify({"message": "Order not found or already accepted"}), 404
         
     # Notify customer / general room
-    socketio.emit('order_update', {
+    socketio.emit('delivery_status', {
         "order_id": order_id,
         "status": "accepted",
         "message": "The merchant has accepted your order and is preparing it."
@@ -65,7 +65,7 @@ def update_order_status():
     if result.modified_count == 0:
         return jsonify({"message": "Order not found"}), 404
         
-    socketio.emit('order_update', {
+    socketio.emit('delivery_status', {
         "order_id": order_id,
         "status": new_status,
         "message": f"Order status updated to: {new_status}"

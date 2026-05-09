@@ -1,0 +1,246 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
+import { MobileShell } from "@/components/MobileShell";
+import { TopBar } from "@/components/TopBar";
+import MapContainer, { type TileStyle } from "@/components/MapContainer";
+import { useAuth } from "@/lib/store";
+import { Star, MessageCircle, Navigation, CheckCircle2, Circle, Loader2, MapPin, Key, Clock, Award, Shield } from "lucide-react";
+import type { Map as LeafletMap } from "leaflet";
+
+type LendTrackSearch = {
+  requestId?: string;
+  lender?: string;
+  distance?: string;
+  rating?: string;
+};
+
+export const Route = createFileRoute("/lend-track")({
+  validateSearch: (search: Record<string, unknown>): LendTrackSearch => {
+    return {
+      requestId: search.requestId as string | undefined,
+      lender: search.lender as string | undefined,
+      distance: search.distance as string | undefined,
+      rating: search.rating as string | undefined,
+    };
+  },
+  component: LendTrack,
+});
+
+const TIMELINE_STEPS = [
+  { id: 1, title: "Request Item", desc: "Request placed securely." },
+  { id: 2, title: "AI Match", desc: "Finding the best peer nearby..." },
+  { id: 3, title: "Lender Accepts", desc: "Lender confirmed the request." },
+  { id: 4, title: "Live Tracking", desc: "Meet at the designated spot." },
+  { id: 5, title: "OTP Handover", desc: "Share OTP to receive item." },
+  { id: 6, title: "Return Reminder", desc: "Automated safe-return tracking." },
+  { id: 7, title: "Ratings & Rewards", desc: "Earn campus rep points." }
+];
+
+function LendTrack() {
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [tileStyle, setTileStyle] = useState<TileStyle>("streets");
+  const [showTilePicker, setShowTilePicker] = useState(false);
+  const [lenderInfo, setLenderInfo] = useState<{ name: string; distance: string; rating: number } | null>(null);
+  
+  // Timeline State
+  const [activeStep, setActiveStep] = useState(1);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const lenderMarkerRef = useRef<unknown>(null);
+  const polylineRef = useRef<unknown>(null);
+
+  const lenderName = search.lender || "Priya Sharma";
+  const lenderDistance = search.distance || "~150m";
+  const lenderRating = search.rating ? parseFloat(search.rating) : 4.9;
+
+  // Auto-advance timeline simulation
+  useEffect(() => {
+    if (activeStep === 1) {
+      const t = setTimeout(() => setActiveStep(2), 1500);
+      return () => clearTimeout(t);
+    } else if (activeStep === 2) {
+      const t = setTimeout(() => {
+        setLenderInfo({ name: lenderName, distance: lenderDistance, rating: lenderRating });
+        setActiveStep(3);
+      }, 2500);
+      return () => clearTimeout(t);
+    } else if (activeStep === 3) {
+      const t = setTimeout(() => setActiveStep(4), 2000);
+      return () => clearTimeout(t);
+    }
+    // Stop auto-advancing at step 4 (Live tracking) for demo purposes, 
+    // user can manually trigger the rest
+  }, [activeStep, lenderName, lenderDistance, lenderRating]);
+
+  // Leaflet Map Logic
+  const handleMapReady = async (map: LeafletMap) => {
+    mapRef.current = map;
+    const L = await import("leaflet");
+
+    const userLatLng: [number, number] = [19.1334, 72.9133];
+    const userIcon = L.divIcon({
+      className: "",
+      html: `<div style="width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.25);font-size:20px;display:flex;align-items:center;justify-content:center;">📍</div>`,
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+
+    L.marker(userLatLng, { icon: userIcon }).addTo(map).bindPopup("You");
+
+    if (lenderInfo) {
+      addLenderMarkerAndLine(L, map, userLatLng);
+    }
+  };
+
+  const addLenderMarkerAndLine = (L: any, map: LeafletMap, userLatLng: [number, number]) => {
+    if (lenderMarkerRef.current) (lenderMarkerRef.current as any).remove();
+    if (polylineRef.current) (polylineRef.current as any).remove();
+
+    const lenderLatLng: [number, number] = [19.1345, 72.9148];
+    const lenderIcon = L.divIcon({
+      className: "",
+      html: `<div style="width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.25);font-size:20px;display:flex;align-items:center;justify-content:center;">👤</div>`,
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+    const marker = L.marker(lenderLatLng, { icon: lenderIcon }).addTo(map).bindPopup(lenderInfo!.name);
+    lenderMarkerRef.current = marker;
+
+    const line = L.polyline([userLatLng, lenderLatLng], {
+      color: "var(--color-primary)",
+      weight: 4,
+      dashArray: "6,6",
+    }).addTo(map);
+    polylineRef.current = line;
+
+    const bounds = L.latLngBounds([userLatLng, lenderLatLng]);
+    map.fitBounds(bounds, { padding: [60, 60] });
+  };
+
+  useEffect(() => {
+    if (!lenderInfo || !mapRef.current) return;
+    import("leaflet").then((L) => {
+      const userLatLng: [number, number] = [19.1334, 72.9133];
+      addLenderMarkerAndLine(L, mapRef.current!, userLatLng);
+    });
+  }, [lenderInfo]);
+
+  const getStepIcon = (stepId: number) => {
+    if (stepId < activeStep) return <CheckCircle2 className="h-5 w-5 text-primary" />;
+    if (stepId === activeStep) {
+      if (stepId === 2) return <Loader2 className="h-5 w-5 text-primary animate-spin" />;
+      return <Circle className="h-5 w-5 fill-primary text-primary animate-pulse" />;
+    }
+    return <Circle className="h-5 w-5 text-muted-foreground/30" />;
+  };
+
+  return (
+    <MobileShell>
+      <TopBar title="Order Status" />
+      
+      {/* Map Section - Only visible from step 4 onwards */}
+      {activeStep >= 4 && (
+        <div className="relative h-[240px] w-full overflow-hidden border-b border-border shadow-sm md:rounded-3xl md:border md:m-4 md:w-auto">
+          <MapContainer
+            center={[19.1334, 72.9133]}
+            zoom={16}
+            tileStyle={tileStyle}
+            onMapReady={handleMapReady}
+            className="h-full w-full z-0"
+          />
+          <div className="absolute right-3 top-3 z-[1000]">
+            <button
+              onClick={() => setShowTilePicker(!showTilePicker)}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-pop transition-transform hover:scale-105 active:scale-95"
+            >
+              <Navigation className="h-4 w-4" />
+            </button>
+            {showTilePicker && (
+              <div className="absolute right-0 top-12 flex gap-1.5 rounded-2xl bg-card/95 p-2 shadow-pop backdrop-blur-sm">
+                {(["streets", "dark", "satellite"] as const).map((style) => (
+                  <button
+                    key={style}
+                    onClick={() => {
+                      setTileStyle(style);
+                      setShowTilePicker(false);
+                    }}
+                    className={`flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-bold transition-all ${
+                      tileStyle === style ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                    }`}
+                  >
+                    {style === "streets" ? "🗺️" : style === "dark" ? "🌙" : "🛰️"}
+                    {style}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="absolute bottom-3 left-3 right-3 z-[1000] rounded-xl bg-card/95 backdrop-blur-md p-3 shadow-pop border border-border flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold">Meet at Library Entrance</p>
+              <p className="text-[10px] text-muted-foreground">Estimated: ~5 mins</p>
+            </div>
+            {lenderInfo && (
+              <button onClick={() => navigate({ to: '/chat/$id', params: { id: lenderInfo.name } })} className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-95">
+                <MessageCircle className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Timeline Section */}
+      <div className="px-5 py-6">
+        <h2 className="text-lg font-bold mb-6">Tracking Timeline</h2>
+        
+        <div className="relative pl-3 border-l-2 border-border/60 ml-2 space-y-6">
+          {TIMELINE_STEPS.map((step) => {
+            const isActive = step.id === activeStep;
+            const isPast = step.id < activeStep;
+            
+            return (
+              <div key={step.id} className="relative pl-6">
+                <div className="absolute -left-[18px] top-0.5 bg-background">
+                  {getStepIcon(step.id)}
+                </div>
+                
+                <div className={`${isActive ? "opacity-100" : isPast ? "opacity-70" : "opacity-40"}`}>
+                  <h3 className={`text-sm font-bold ${isActive ? "text-primary" : "text-foreground"}`}>
+                    {step.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{step.desc}</p>
+                  
+                  {/* Additional UI for specific steps when active */}
+                  {isActive && step.id === 5 && (
+                    <div className="mt-3 p-3 bg-secondary rounded-xl flex items-center justify-between">
+                      <span className="text-xs font-semibold">Your OTP:</span>
+                      <span className="text-lg font-mono font-bold tracking-widest text-primary">8492</span>
+                    </div>
+                  )}
+                  {isActive && step.id === 2 && (
+                    <div className="mt-2 h-1.5 w-32 bg-secondary rounded-full overflow-hidden">
+                      <div className="h-full bg-primary animate-pulse w-full rounded-full"></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
+      {/* Advance Demo Button (for testing/hackathon purposes) */}
+      <div className="p-4 bg-background border-t border-border mb-16 md:mb-0">
+        <button 
+          onClick={() => setActiveStep(prev => prev < 7 ? prev + 1 : 1)}
+          className="w-full text-xs py-3 bg-secondary text-secondary-foreground rounded-xl font-bold transition active:scale-95"
+        >
+          [Demo] Simulate next step
+        </button>
+      </div>
+
+    </MobileShell>
+  );
+}

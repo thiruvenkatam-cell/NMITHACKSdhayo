@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useCartStore } from "@/lib/store";
+import { api } from "@/lib/api";
 import { TopBar } from "@/components/TopBar";
 import { MobileShell } from "@/components/MobileShell";
 import { categories, products } from "@/lib/data";
@@ -19,11 +20,37 @@ export const Route = createFileRoute("/store")({
 
 function Store() {
   const [active, setActive] = useState<string>("all");
-  const list = active === "all" ? products : products.filter((p) => p.category === active);
+  const [dbProducts, setDbProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchStore = async () => {
+      try {
+        const res = await api.get("/merchant/products");
+        if (res.data.products) {
+          const mapped = res.data.products.map((p: any) => ({
+            id: p.product_id,
+            name: p.name,
+            price: p.price,
+            category: p.category || "snacks",
+            shop: "Hostel Canteen",
+            unit: "1 serve",
+            emoji: p.category === "snacks" ? "🥟" : p.category === "drinks" ? "🧋" : "📦",
+            bg: "linear-gradient(135deg, oklch(0.9 0.1 20), oklch(0.85 0.1 30))",
+            eta: "5 min"
+          }));
+          setDbProducts(mapped);
+        }
+      } catch (err) {
+        // Fallback to static if backend fails
+        setDbProducts(products);
+      }
+    };
+    fetchStore();
+  }, []);
+
+  const list = active === "all" ? dbProducts : dbProducts.filter((p) => p.category === active);
   
-  const { items, addToCart, getTotalItems, getSubtotal } = useCartStore();
-  const totalItems = getTotalItems();
-  const subtotal = getSubtotal();
+  const { addToCart } = useCartStore();
 
   return (
     <MobileShell>
@@ -84,22 +111,8 @@ function Store() {
             </div>
           </Link>
         ))}
-      </div>
-
-      {/* Floating cart bar */}
-      {totalItems > 0 && (
-        <Link
-          to="/cart"
-          className="fixed inset-x-0 bottom-20 z-30 mx-auto flex w-[calc(100%-2rem)] max-w-[448px] items-center justify-between rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-pop md:sticky md:bottom-6 md:mx-0 md:w-auto md:max-w-none md:px-5 md:py-4"
-        >
-          <div>
-            <p className="text-[11px] font-semibold opacity-80 md:text-xs">{totalItems} item{totalItems > 1 ? 's' : ''} · 9 min</p>
-            <p className="text-sm font-bold md:text-base">₹{subtotal} · View cart</p>
-          </div>
-          <span className="rounded-xl bg-brand px-3 py-1.5 text-xs font-bold text-brand-foreground md:px-4 md:py-2">Checkout →</span>
-        </Link>
-      )}
-    </MobileShell>
+       </div>
+     </MobileShell>
   );
 }
 

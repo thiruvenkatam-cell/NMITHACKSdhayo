@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { socketService } from "@/lib/socket";
 import { MerchantShell } from "@/components/MerchantShell";
 import { TopBar } from "@/components/TopBar";
 import { Clock, CheckCircle2, XCircle, Bike, ChevronRight, MapPin, Zap, Filter } from "lucide-react";
@@ -44,7 +45,7 @@ function MerchantOrders() {
         // Map backend orders to frontend format
         const mapped = res.data.orders.map((o: any) => ({
           id: o.order_id || `#${Math.floor(Math.random() * 900) + 100}`,
-          items: o.items.map((i: any) => `${i.name} × ${i.quantity}`).join(", "),
+          items: Array.isArray(o.items) ? o.items.map((i: any) => `${i.name} × ${i.quantity}`).join(", ") : (o.item || "Unknown item"),
           to: o.delivery_location || "Campus",
           from: "Store",
           time: new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -64,8 +65,17 @@ function MerchantOrders() {
 
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 15000);
-    return () => clearInterval(interval);
+    const socket = socketService.connect();
+    
+    const handleNewOrder = () => {
+      fetchOrders();
+    };
+    
+    socket?.on("new_order", handleNewOrder);
+    
+    return () => {
+      socket?.off("new_order", handleNewOrder);
+    };
   }, []);
 
   const updateStatus = async (id: string, status: Order["status"]) => {

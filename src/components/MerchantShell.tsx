@@ -66,7 +66,7 @@ export function MerchantShell({ children }: { children: ReactNode }) {
 
       {/* Main content */}
       <div className="flex-1 md:min-w-0">
-        <div className="mx-auto w-full max-w-[480px] pb-24 md:max-w-[1240px] md:px-8 md:pb-12 md:pt-2">
+        <div className="mx-auto w-full max-w-[480px] pb-24 md:max-w-[1240px] md:px-8 md:pb-12 md:pt-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
           {children}
         </div>
       </div>

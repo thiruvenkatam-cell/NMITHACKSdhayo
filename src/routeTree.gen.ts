@@ -25,13 +25,15 @@ import { Route as MerchantCouriersRouteImport } from './routes/merchant-couriers
 import { Route as MerchantAnalyticsRouteImport } from './routes/merchant-analytics'
 import { Route as MerchantRouteImport } from './routes/merchant'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LendTrackRouteImport } from './routes/lend-track'
 import { Route as LendRouteImport } from './routes/lend'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
-import { Route as LendIdRouteImport } from './routes/lend.$id'
+import { Route as LendItemIdRouteImport } from './routes/lend-item.$id'
+import { Route as ChatIdRouteImport } from './routes/chat.$id'
 
 const VerifyCollegeRoute = VerifyCollegeRouteImport.update({
   id: '/verify-college',
@@ -113,6 +115,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LendTrackRoute = LendTrackRouteImport.update({
+  id: '/lend-track',
+  path: '/lend-track',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LendRoute = LendRouteImport.update({
   id: '/lend',
   path: '/lend',
@@ -143,10 +150,15 @@ const ProductIdRoute = ProductIdRouteImport.update({
   path: '/product/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LendIdRoute = LendIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => LendRoute,
+const LendItemIdRoute = LendItemIdRouteImport.update({
+  id: '/lend-item/$id',
+  path: '/lend-item/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatIdRoute = ChatIdRouteImport.update({
+  id: '/chat/$id',
+  path: '/chat/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -154,7 +166,8 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/dashboard': typeof DashboardRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/lend': typeof LendRouteWithChildren
+  '/lend': typeof LendRoute
+  '/lend-track': typeof LendTrackRoute
   '/login': typeof LoginRoute
   '/merchant': typeof MerchantRoute
   '/merchant-analytics': typeof MerchantAnalyticsRoute
@@ -171,7 +184,8 @@ export interface FileRoutesByFullPath {
   '/store': typeof StoreRoute
   '/track': typeof TrackRoute
   '/verify-college': typeof VerifyCollegeRoute
-  '/lend/$id': typeof LendIdRoute
+  '/chat/$id': typeof ChatIdRoute
+  '/lend-item/$id': typeof LendItemIdRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRoutesByTo {
@@ -179,7 +193,8 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/dashboard': typeof DashboardRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/lend': typeof LendRouteWithChildren
+  '/lend': typeof LendRoute
+  '/lend-track': typeof LendTrackRoute
   '/login': typeof LoginRoute
   '/merchant': typeof MerchantRoute
   '/merchant-analytics': typeof MerchantAnalyticsRoute
@@ -196,7 +211,8 @@ export interface FileRoutesByTo {
   '/store': typeof StoreRoute
   '/track': typeof TrackRoute
   '/verify-college': typeof VerifyCollegeRoute
-  '/lend/$id': typeof LendIdRoute
+  '/chat/$id': typeof ChatIdRoute
+  '/lend-item/$id': typeof LendItemIdRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRoutesById {
@@ -205,7 +221,8 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/dashboard': typeof DashboardRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/lend': typeof LendRouteWithChildren
+  '/lend': typeof LendRoute
+  '/lend-track': typeof LendTrackRoute
   '/login': typeof LoginRoute
   '/merchant': typeof MerchantRoute
   '/merchant-analytics': typeof MerchantAnalyticsRoute
@@ -222,7 +239,8 @@ export interface FileRoutesById {
   '/store': typeof StoreRoute
   '/track': typeof TrackRoute
   '/verify-college': typeof VerifyCollegeRoute
-  '/lend/$id': typeof LendIdRoute
+  '/chat/$id': typeof ChatIdRoute
+  '/lend-item/$id': typeof LendItemIdRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRouteTypes {
@@ -233,6 +251,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/leaderboard'
     | '/lend'
+    | '/lend-track'
     | '/login'
     | '/merchant'
     | '/merchant-analytics'
@@ -249,7 +268,8 @@ export interface FileRouteTypes {
     | '/store'
     | '/track'
     | '/verify-college'
-    | '/lend/$id'
+    | '/chat/$id'
+    | '/lend-item/$id'
     | '/product/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -258,6 +278,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/leaderboard'
     | '/lend'
+    | '/lend-track'
     | '/login'
     | '/merchant'
     | '/merchant-analytics'
@@ -274,7 +295,8 @@ export interface FileRouteTypes {
     | '/store'
     | '/track'
     | '/verify-college'
-    | '/lend/$id'
+    | '/chat/$id'
+    | '/lend-item/$id'
     | '/product/$id'
   id:
     | '__root__'
@@ -283,6 +305,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/leaderboard'
     | '/lend'
+    | '/lend-track'
     | '/login'
     | '/merchant'
     | '/merchant-analytics'
@@ -299,7 +322,8 @@ export interface FileRouteTypes {
     | '/store'
     | '/track'
     | '/verify-college'
-    | '/lend/$id'
+    | '/chat/$id'
+    | '/lend-item/$id'
     | '/product/$id'
   fileRoutesById: FileRoutesById
 }
@@ -308,7 +332,8 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   DashboardRoute: typeof DashboardRoute
   LeaderboardRoute: typeof LeaderboardRoute
-  LendRoute: typeof LendRouteWithChildren
+  LendRoute: typeof LendRoute
+  LendTrackRoute: typeof LendTrackRoute
   LoginRoute: typeof LoginRoute
   MerchantRoute: typeof MerchantRoute
   MerchantAnalyticsRoute: typeof MerchantAnalyticsRoute
@@ -325,6 +350,8 @@ export interface RootRouteChildren {
   StoreRoute: typeof StoreRoute
   TrackRoute: typeof TrackRoute
   VerifyCollegeRoute: typeof VerifyCollegeRoute
+  ChatIdRoute: typeof ChatIdRoute
+  LendItemIdRoute: typeof LendItemIdRoute
   ProductIdRoute: typeof ProductIdRoute
 }
 
@@ -442,6 +469,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lend-track': {
+      id: '/lend-track'
+      path: '/lend-track'
+      fullPath: '/lend-track'
+      preLoaderRoute: typeof LendTrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lend': {
       id: '/lend'
       path: '/lend'
@@ -484,32 +518,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lend/$id': {
-      id: '/lend/$id'
-      path: '/$id'
-      fullPath: '/lend/$id'
-      preLoaderRoute: typeof LendIdRouteImport
-      parentRoute: typeof LendRoute
+    '/lend-item/$id': {
+      id: '/lend-item/$id'
+      path: '/lend-item/$id'
+      fullPath: '/lend-item/$id'
+      preLoaderRoute: typeof LendItemIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat/$id': {
+      id: '/chat/$id'
+      path: '/chat/$id'
+      fullPath: '/chat/$id'
+      preLoaderRoute: typeof ChatIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
-
-interface LendRouteChildren {
-  LendIdRoute: typeof LendIdRoute
-}
-
-const LendRouteChildren: LendRouteChildren = {
-  LendIdRoute: LendIdRoute,
-}
-
-const LendRouteWithChildren = LendRoute._addFileChildren(LendRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CartRoute: CartRoute,
   DashboardRoute: DashboardRoute,
   LeaderboardRoute: LeaderboardRoute,
-  LendRoute: LendRouteWithChildren,
+  LendRoute: LendRoute,
+  LendTrackRoute: LendTrackRoute,
   LoginRoute: LoginRoute,
   MerchantRoute: MerchantRoute,
   MerchantAnalyticsRoute: MerchantAnalyticsRoute,
@@ -526,6 +558,8 @@ const rootRouteChildren: RootRouteChildren = {
   StoreRoute: StoreRoute,
   TrackRoute: TrackRoute,
   VerifyCollegeRoute: VerifyCollegeRoute,
+  ChatIdRoute: ChatIdRoute,
+  LendItemIdRoute: LendItemIdRoute,
   ProductIdRoute: ProductIdRoute,
 }
 export const routeTree = rootRouteImport

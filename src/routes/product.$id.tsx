@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useCartStore } from "@/lib/store";
 import { TopBar } from "@/components/TopBar";
@@ -14,6 +15,7 @@ function Product() {
   const { id } = useParams({ from: "/product/$id" });
   const navigate = useNavigate();
   const { addToCart } = useCartStore();
+  const [qty, setQty] = useState(1);
   const p = products.find((x) => x.id === id) ?? products[0];
 
   return (
@@ -87,22 +89,26 @@ function Product() {
       </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[480px] border-t border-border bg-card px-4 py-3 md:sticky md:bottom-6 md:mt-6 md:max-w-none md:rounded-2xl md:border md:px-5 md:py-4 md:shadow-pop">
+      <div
+        className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[480px] border-t border-border bg-card px-4 py-3 md:sticky md:bottom-6 md:mt-6 md:max-w-none md:rounded-2xl md:border md:px-5 md:py-4 md:shadow-pop"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
+      >
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-3 rounded-xl border border-border px-3 py-2">
-            <button className="text-lg font-bold">−</button>
-            <span className="w-4 text-center text-sm font-bold">1</span>
-            <button className="text-lg font-bold">+</button>
+            <button type="button" onClick={() => setQty((prev) => Math.max(1, prev - 1))} className="text-lg font-bold">−</button>
+            <span className="w-6 text-center text-sm font-bold">{qty}</span>
+            <button type="button" onClick={() => setQty((prev) => prev + 1)} className="text-lg font-bold">+</button>
           </div>
           <button 
+            type="button"
             onClick={() => {
-              addToCart(p);
-              toast.success(`Added ${p.name} to cart`);
+              addToCart({ ...p, qty });
+              toast.success(`Added ${qty} × ${p.name} to cart`);
               navigate({ to: "/cart" });
             }}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-pop"
           >
-            Add to cart · ₹{p.price}
+            Add to cart · ₹{p.price * qty}
           </button>
         </div>
       </div>

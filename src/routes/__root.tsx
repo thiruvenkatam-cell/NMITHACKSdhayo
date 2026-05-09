@@ -120,7 +120,9 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <div className="min-h-screen animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <Outlet />
+      </div>
     </QueryClientProvider>
   );
 }

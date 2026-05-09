@@ -14,10 +14,11 @@ export function TopBar({
   subtitle?: string;
 }) {
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-card/95 px-4 py-3 backdrop-blur md:rounded-b-2xl md:border-b-0 md:bg-transparent md:px-0 md:py-5 md:backdrop-blur-none">
+    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-card/95 px-4 py-3 backdrop-blur md:rounded-b-2xl md:border-b-0 md:bg-transparent md:px-4 md:py-4 md:backdrop-blur-none">
       {back && (
         <Link
           to="/"
+          aria-label="Go back"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-secondary-foreground md:hidden"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -28,7 +29,7 @@ export function TopBar({
         {subtitle && <p className="truncate text-xs text-muted-foreground md:text-sm">{subtitle}</p>}
       </div>
       {right ?? (
-        <button className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+        <button aria-label="Search" className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
           <Search className="h-4 w-4" />
         </button>
       )}

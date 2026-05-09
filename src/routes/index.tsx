@@ -49,22 +49,8 @@ function Index() {
     setOnline(status);
     if (status) {
       toast.success("You are now online! 🟢");
-      // Simulate incoming order after 3 seconds
-      setTimeout(() => {
-        setIncomingOrder({
-          id: "ord-123",
-          items: ["Masala Maggi Cup", "Cold Coffee"],
-          earnings: 35,
-          exp: 50,
-          pickupLocation: "Hostel Canteen",
-          pickupDistance: "200m",
-          dropoffLocation: "Room 402, Block B",
-          dropoffDistance: "500m",
-          eta: "9 min"
-        });
-      }, 3000);
     } else {
-      setIncomingOrder(null);
+      toast.info("You are now offline");
     }
   };
 
@@ -277,14 +263,14 @@ function Index() {
         <div className="flex items-end justify-between">
           <div>
             <h2 className="text-base font-bold md:text-2xl">Live near you</h2>
-            <p className="text-[11px] text-muted-foreground md:text-sm">Students online · ready to lend</p>
+            <p className="text-[11px] text-muted-foreground md:text-sm">Students online · ready to lend or buy</p>
           </div>
           <Link to="/lend" className="text-xs font-semibold text-primary md:text-sm">Open feed</Link>
         </div>
         <div className="mt-3 grid gap-2.5 md:grid-cols-2 md:gap-4">
           {lendItems.slice(0, 3).map((l) => (
             <Link
-              to="/lend/$id"
+              to="/lend-item/$id"
               params={{ id: l.id }}
               key={l.id}
               className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-card"
@@ -304,7 +290,7 @@ function Index() {
                         : "bg-warning/20 text-warning-foreground"
                     }`}
                   >
-                    {l.tag === "Lend" ? "LENDING" : "NEEDS"}
+                    {l.tag === "Lend" ? "LENDING" : "BUYING"}
                   </span>
                   <span className="text-[10px] text-muted-foreground">{l.posted}</span>
                 </div>

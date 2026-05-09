@@ -1,17 +1,47 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { useState } from "react";
 import { toast } from "sonner";
 import { TopBar } from "@/components/TopBar";
 import { MobileShell } from "@/components/MobileShell";
 import { lendItems } from "@/lib/data";
 import { Star, Shield, MessageCircle } from "lucide-react";
+import { useAuth } from "@/lib/store";
+import { api } from "@/lib/api";
 
-export const Route = createFileRoute("/lend/$id")({
+export const Route = createFileRoute("/lend-item/$id")({
   component: LendDetail,
 });
 
 function LendDetail() {
-  const { id } = useParams({ from: "/lend/$id" });
+  const { id } = useParams({ from: "/lend-item/$id" });
   const l = lendItems.find((x) => x.id === id) ?? lendItems[0];
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleBorrow = async () => {
+    setIsLoading(true);
+    try {
+      // Simulate API call for frontend-only demo
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Navigate to lend-track page with lender match info
+      navigate({
+        to: '/lend-track',
+        search: {
+          requestId: `req_${Date.now()}`,
+          lender: l.by,
+          distance: l.distance,
+          rating: l.rating
+        }
+      });
+      toast.success("Request successful! Matching...");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to request item");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <MobileShell>
@@ -44,7 +74,7 @@ function LendDetail() {
             </p>
           </div>
           <button 
-            onClick={() => toast("Opening chat with " + l.by + "...")}
+            onClick={() => navigate({ to: '/chat/$id', params: { id: l.by } })}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-95"
           >
             <MessageCircle className="h-4 w-4" />
@@ -84,10 +114,25 @@ function LendDetail() {
       </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[480px] border-t border-border bg-card px-4 py-3 md:sticky md:bottom-6 md:mt-6 md:max-w-none md:rounded-2xl md:border md:px-5 md:py-4 md:shadow-pop">
-        <Link to="/track" className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-pop">
-          {l.tag === "Lend" ? `Borrow now · ₹${l.pricePerHr}` : `Lend & deliver · earn ₹${l.pricePerHr}`}
-        </Link>
+      <div
+        className="fixed inset-x-0 bottom-0 z-[9999] mx-auto w-full max-w-[480px] pointer-events-auto border-t border-border bg-card px-4 py-3 md:sticky md:bottom-6 md:mt-6 md:max-w-none md:rounded-2xl md:border md:px-5 md:py-4 md:shadow-pop"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))", pointerEvents: "auto" }}
+      >
+        <button
+          type="button"
+          onClick={handleBorrow}
+          disabled={isLoading}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-pop disabled:opacity-70"
+        >
+          {isLoading ? (
+            <>
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
+              Processing...
+            </>
+          ) : (
+            "Request Item"
+          )}
+        </button>
       </div>
     </MobileShell>
   );

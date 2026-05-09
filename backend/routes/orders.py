@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from extensions import mongo
+from extensions import mongo, socketio
 import uuid
 import datetime
 
@@ -17,12 +17,14 @@ def create_order():
         
     order = {
         "order_id": str(uuid.uuid4()),
+        "merchant_id": "demo_merchant_1", # Default merchant for hackathon
         "order_type": data.order_type,
-        "item": data.item,
+        "items": [{"name": data.item, "quantity": 1}], # Map to array for dashboard
+        "delivery_location": data.drop_name or data.drop or "Unknown",
         "pickup_name": data.pickup_name or data.pickup or "Unknown",
-        "drop_name": data.drop_name or data.drop or "Unknown",
         "priority": data.priority,
         "status": "pending",
+        "total_amount": 150, # Mock total for now
         "created_at": datetime.datetime.utcnow()
     }
     
@@ -33,9 +35,12 @@ def create_order():
         order["drop_location"] = data.drop_location.model_dump()
     
     # Store in MongoDB
-    mongo.db.orders.insert_one(order)
+    mongo.db.merchant_orders.insert_one(order)
     order['_id'] = str(order['_id'])
     order['created_at'] = order['created_at'].isoformat()
+    
+    # Emit socket event to merchant dashboard
+    socketio.emit('new_order', {"order_id": order["order_id"], "status": "pending"})
     
     # Run the heavy matching logic in a background thread so the API responds instantly!
     from utils.worker import run_background_task
@@ -50,7 +55,7 @@ def create_order():
     run_background_task(async_match, order)
     
     # Calculate Surge Pricing based on demand (pending orders)
-    pending_count = mongo.db.orders.count_documents({"status": "pending"})
+    pending_count = mongo.db.merchant_orders.count_documents({"status": "pending"})
     surge_multiplier = 1.0
     if pending_count > 10:
         surge_multiplier = 1.5

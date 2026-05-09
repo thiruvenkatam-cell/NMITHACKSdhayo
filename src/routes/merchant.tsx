@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { socketService } from "@/lib/socket";
 import { MerchantShell } from "@/components/MerchantShell";
 import { TopBar } from "@/components/TopBar";
 import { Package, TrendingUp, Clock, Bike, Star, IndianRupee, Bell, ChevronRight, Zap, Users, ArrowUpRight } from "lucide-react";
@@ -9,7 +10,7 @@ import { Package, TrendingUp, Clock, Bike, Star, IndianRupee, Bell, ChevronRight
 export const Route = createFileRoute("/merchant")({
   head: () => ({
     meta: [
-      { title: "Merchant Dashboard — UniDrop" },
+      { title: "Lend and Buy Dashboard — UniDrop" },
       { name: "description", content: "Manage your campus shop, orders, and deliveries." },
     ],
   }),
@@ -49,7 +50,7 @@ function Merchant() {
       if (res.data.orders) {
         const mapped = res.data.orders.map((o: any) => ({
           id: o.order_id || `#ORD-${Math.floor(Math.random() * 900) + 100}`,
-          items: o.items.map((i: any) => `${i.name} × ${i.quantity}`).join(", "),
+          items: Array.isArray(o.items) ? o.items.map((i: any) => `${i.name} × ${i.quantity}`).join(", ") : (o.item || "Unknown item"),
           to: o.delivery_location || "Campus",
           time: new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           status: o.status === "pending" ? "new" : o.status,
@@ -70,8 +71,20 @@ function Merchant() {
 
   useEffect(() => {
     fetchLiveOrders();
-    const interval = setInterval(fetchLiveOrders, 10000);
-    return () => clearInterval(interval);
+    
+    // Replace polling with WebSocket
+    const socket = socketService.connect();
+    const handleNewOrder = (data: any) => {
+      // Refresh the orders from backend or prepend
+      toast.success("📦 New real-time order received!");
+      fetchLiveOrders();
+    };
+    
+    socket?.on("new_order", handleNewOrder);
+    
+    return () => {
+      socket?.off("new_order", handleNewOrder);
+    };
   }, []);
 
   const couriers = [
@@ -92,7 +105,7 @@ function Merchant() {
   return (
     <MerchantShell>
       <TopBar
-        title="Dashboard"
+        title="Lend and Buy"
         back={false}
         right={
           <Link to="/merchant-orders" className="relative flex h-9 w-9 items-center justify-center rounded-full bg-secondary">

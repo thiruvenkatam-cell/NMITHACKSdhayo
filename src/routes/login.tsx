@@ -74,7 +74,7 @@ function Login() {
     setLoading(true);
     try {
       if (isLogin) {
-        const endpoint = isMerchant ? "/merchant/login" : "/auth/login";
+        const endpoint = isMerchant ? "/merchant/login" : "/login";
         const res = await api.post(endpoint, { email, password });
         localStorage.setItem("auth_token", res.data.token);
         toast.success("Logged in successfully");
@@ -84,7 +84,7 @@ function Login() {
           navigate({ to: "/" });
         }
       } else {
-        const endpoint = isMerchant ? "/merchant/signup" : "/auth/register";
+        const endpoint = isMerchant ? "/merchant/signup" : "/register";
         const payload = isMerchant
           ? { name, email, phone, password, shop_name: shopName, business_type: "canteen" }
           : { name, email, phone, password, role: "student" };

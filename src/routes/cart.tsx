@@ -4,6 +4,8 @@ import { useCartStore } from "@/lib/store";
 import { MobileShell } from "@/components/MobileShell";
 import { TopBar } from "@/components/TopBar";
 import { Bike, Clock, Minus, Plus, Zap, ShieldCheck, MapPin, Receipt, ArrowRight } from "lucide-react";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/cart")({
   component: Cart,
@@ -21,23 +23,32 @@ function Cart() {
   const runnerTip = priority === "standard" ? 15 : 30;
   const total = subtotal + platformFee + (items.length > 0 ? runnerTip : 0);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (items.length === 0) return;
     setIsProcessing(true);
-    setMatchStatus("AI is calculating the best route...");
+    setMatchStatus("Processing payment...");
     
-    setTimeout(() => {
-      setMatchStatus("Matching with a peer runner...");
-    }, 1500);
-
-    setTimeout(() => {
-      setMatchStatus("Aarav accepted your delivery! 🚀");
-    }, 3000);
-
-    setTimeout(() => {
-      clearCart();
-      navigate({ to: "/track" });
-    }, 4500);
+    try {
+      const itemString = items.map(i => `${i.name} x ${i.qty}`).join(", ");
+      const res = await api.post("/create-order", {
+        order_type: "canteen_delivery",
+        item: itemString,
+        pickup_name: "Hostel Canteen",
+        drop_name: "Room 402, Hostel B",
+        priority: priority
+      });
+      
+      setMatchStatus("Order placed successfully!");
+      setTimeout(() => {
+        clearCart();
+        // Pass order ID if track page needs it, or just rely on backend socket
+        navigate({ to: "/track", search: { orderId: res.data.order.order_id } });
+      }, 1000);
+      
+    } catch (err) {
+      toast.error("Failed to place order.");
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -162,7 +173,10 @@ function Cart() {
       </div>
 
       {/* Sticky Checkout Bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] border-t border-border bg-card px-4 pb-6 pt-3 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] md:pb-4">
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] border-t border-border bg-card px-4 pb-6 pt-3 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] md:pb-4"
+        style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
+      >
         <button
           onClick={handleCheckout}
           disabled={isProcessing}

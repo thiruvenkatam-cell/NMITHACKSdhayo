@@ -6,8 +6,18 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import MapContainer, { type TileStyle } from "@/components/MapContainer";
 import type { Map as LeafletMap } from "leaflet";
+import { socketService } from "@/lib/socket";
+
+type TrackSearch = {
+  orderId?: string;
+};
 
 export const Route = createFileRoute("/track")({
+  validateSearch: (search: Record<string, unknown>): TrackSearch => {
+    return {
+      orderId: search.orderId as string | undefined,
+    };
+  },
   head: () => ({
     meta: [
       { title: "Track delivery — live map & ETA" },
@@ -40,48 +50,62 @@ const MAP_CENTER: [number, number] = [
   (ORIGIN[0] + DESTINATION[0]) / 2,
   (ORIGIN[1] + DESTINATION[1]) / 2,
 ];
-
 function Track() {
+  const { orderId } = Route.useSearch();
   const [tileStyle, setTileStyle] = useState<TileStyle>("streets");
   const [showTilePicker, setShowTilePicker] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpConfirmed, setOtpConfirmed] = useState(false);
+  const [currentStage, setCurrentStage] = useState(0);
+  const [runnerInfo, setRunnerInfo] = useState<any>(null);
   const deliveryOtp = "4827";
   const mapInstanceRef = useRef<LeafletMap | null>(null);
   const runnerMarkerRef = useRef<unknown>(null);
 
-  // Animate the runner marker along remaining route
-  useEffect(() => {
-    if (!runnerMarkerRef.current) return;
-    let animFrame: number;
-    let idx = 0;
-    const remaining = ROUTE_COORDS.slice(RUNNER_INDEX);
+  // Determine UI state based on currentStage
+  const isPending = currentStage === 0;
+  const topBarTitle = isPending ? "Order Pending" : "On the way";
+  const topBarSubtitle = isPending ? "Waiting for merchant acceptance..." : "ETA 4 min · 320 m away";
 
-    const step = () => {
-      if (!runnerMarkerRef.current) return;
-      const pos = remaining[idx % remaining.length];
-      // @ts-expect-error marker setLatLng
-      runnerMarkerRef.current.setLatLng(pos);
-      idx++;
-      if (idx < remaining.length) {
-        animFrame = window.setTimeout(step, 1200) as unknown as number;
+   useEffect(() => {
+    const socket = socketService.connect();
+
+    // Join the room for this specific order
+    if (orderId) {
+      socket?.emit('join_order_room', { order_id: orderId });
+    }
+
+    const handleDeliveryStatus = (data: any) => {
+      if (!orderId || data.order_id === orderId) {
+        const stageMap: Record<string, number> = {
+          "pending": 0, "accepted": 1, "picked_up": 2, "arriving": 3, "delivered": 4
+        };
+        if (stageMap[data.status] !== undefined) {
+          setCurrentStage(stageMap[data.status]);
+          if (data.status === "delivered" || data.status === "arriving") {
+            setShowOtp(true);
+          }
+        }
       }
     };
 
-    const delay = setTimeout(step, 2000);
-    return () => {
-      clearTimeout(delay);
-      clearTimeout(animFrame);
+    const handleLiveLocation = (data: any) => {
+      if (!orderId || data.order_id === orderId) {
+        if (runnerMarkerRef.current) {
+          // @ts-expect-error marker setLatLng
+          runnerMarkerRef.current.setLatLng([data.lat, data.lng]);
+        }
+      }
     };
-  }, []);
 
-  // Show OTP after runner reaches destination
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowOtp(true);
-    }, 8000);
-    return () => clearTimeout(timer);
-  }, []);
+    socket?.on('delivery_status', handleDeliveryStatus);
+    socket?.on('live_location', handleLiveLocation);
+    
+    return () => {
+      socket?.off('delivery_status', handleDeliveryStatus);
+      socket?.off('live_location', handleLiveLocation);
+    };
+  }, [orderId]);
 
   const handleMapReady = useCallback(async (map: LeafletMap) => {
     mapInstanceRef.current = map;
@@ -199,7 +223,7 @@ function Track() {
 
   return (
     <MobileShell>
-      <TopBar title="On the way" subtitle="ETA 4 min · 320 m away" back={false} />
+      <TopBar title={topBarTitle} subtitle={topBarSubtitle} back={false} />
 
       {/* Real Leaflet map */}
       <div className="relative h-[360px] overflow-hidden md:h-[520px] md:rounded-3xl">
@@ -258,49 +282,63 @@ function Track() {
       </div>
 
       {/* Sheet */}
-      <div className="-mt-6 rounded-t-3xl border-t border-border bg-card px-4 pb-6 pt-5 shadow-pop">
-        <div className="mx-auto h-1 w-10 rounded-full bg-border" />
-        <div className="mt-4 flex items-center gap-2">
-          <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold text-brand-foreground">PICKED UP</span>
-          <span className="text-[11px] font-semibold text-muted-foreground">Order #CC-3487</span>
-        </div>
-        <h2 className="mt-2 text-xl font-bold">Aarav is bringing your order</h2>
-        <p className="text-xs text-muted-foreground">Masala Maggi Cup · Cold Coffee · ₹95</p>
-
-        {/* progress */}
-        <div className="mt-4 flex items-center gap-2">
-          {["Placed", "Picked", "On way", "Delivered"].map((s, i) => (
-            <div key={s} className="flex flex-1 flex-col items-center gap-1">
-              <div
-                className="h-1.5 w-full rounded-full"
-                style={{ background: i <= 2 ? "var(--color-primary)" : "var(--color-border)" }}
-              />
-              <span className="text-[10px] font-semibold" style={{ color: i <= 2 ? "var(--color-foreground)" : "var(--color-muted-foreground)" }}>{s}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Runner card */}
-        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-border p-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-2xl">🧑‍🎓</div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold">Aarav · Runner</p>
-            <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <Star className="h-3 w-3 fill-warning text-warning" /> 4.9 · 124 drops · CSE 2nd yr
+      {isPending ? (
+        <div className="-mt-6 rounded-t-3xl border-t border-border bg-card px-4 pb-6 pt-8 shadow-pop">
+          <div className="flex flex-col items-center justify-center py-6">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+            <p className="mt-4 text-sm font-semibold text-muted-foreground">
+              Waiting for merchant to accept your order...
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              This usually takes a few seconds.
             </p>
           </div>
-          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary"><MessageCircle className="h-4 w-4" /></button>
-          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground"><Phone className="h-4 w-4" /></button>
         </div>
-
-        <div className="mt-3 flex items-center justify-between rounded-2xl bg-accent p-3">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-accent-foreground">After delivery</p>
-            <p className="text-xs text-accent-foreground">Rate Aarav & earn 10 campus points</p>
+      ) : (
+        <div className="-mt-6 rounded-t-3xl border-t border-border bg-card px-4 pb-6 pt-5 shadow-pop">
+          <div className="mx-auto h-1 w-10 rounded-full bg-border" />
+          <div className="mt-4 flex items-center gap-2">
+            <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold text-brand-foreground">PICKED UP</span>
+            <span className="text-[11px] font-semibold text-muted-foreground">Order #CC-3487</span>
           </div>
-          <Link to="/" className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Rate now</Link>
+          <h2 className="mt-2 text-xl font-bold">Aarav is bringing your order</h2>
+          <p className="text-xs text-muted-foreground">Masala Maggi Cup · Cold Coffee · ₹95</p>
+
+          {/* progress */}
+          <div className="mt-4 flex items-center gap-2">
+            {["Placed", "Picked", "On way", "Delivered"].map((s, i) => (
+              <div key={s} className="flex flex-1 flex-col items-center gap-1">
+                <div
+                  className="h-1.5 w-full rounded-full transition-colors"
+                  style={{ background: currentStage >= i ? "var(--color-primary)" : "var(--color-border)" }}
+                />
+                <span className="text-[10px] font-semibold" style={{ color: currentStage >= i ? "var(--color-foreground)" : "var(--color-muted-foreground)" }}>{s}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Runner card */}
+          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-border p-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-2xl">🧑‍🎓</div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold">Aarav · Runner</p>
+              <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Star className="h-3 w-3 fill-warning text-warning" /> 4.9 · 124 drops · CSE 2nd yr
+              </p>
+            </div>
+            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary"><MessageCircle className="h-4 w-4" /></button>
+            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground"><Phone className="h-4 w-4" /></button>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between rounded-2xl bg-accent p-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-accent-foreground">After delivery</p>
+              <p className="text-xs text-accent-foreground">Rate Aarav & earn 10 campus points</p>
+            </div>
+            <Link to="/" className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Rate now</Link>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* OTP Verification Overlay */}
       {showOtp && !otpConfirmed && (
