@@ -75,7 +75,12 @@ function MerchantProducts() {
     // Optimistic update
     setMenu((prev) => prev.map((m) => (m.id === id ? { ...m, available: !m.available } : m)));
     try {
-      await api.put(`/merchant/update-product/${id}`, { is_available: !item.available });
+      await api.put(`/merchant/update-product/${id}`, { 
+        name: item.name,
+        price: Number(item.price),
+        stock: Number(item.stock),
+        is_available: !item.available 
+      });
       toast(item.available ? `${item.name} marked out of stock` : `${item.name} is available`);
     } catch (err) {
       toast.error("Failed to update status");
