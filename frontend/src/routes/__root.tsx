@@ -89,7 +89,6 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-<<<<<<< HEAD:src/routes/__root.tsx
       <div className="min-h-screen animate-in fade-in slide-in-from-bottom-4 duration-300">
         <Outlet />
       </div>
