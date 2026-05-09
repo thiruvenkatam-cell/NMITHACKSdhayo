@@ -145,7 +145,7 @@ function MerchantTracking() {
           <div className="mt-4 flex items-center gap-1">
             {stages.map((s, i) => (
               <div key={s} className="flex-1 text-center">
-                <div className={`h-2 rounded-full mb-1 transition-all ${currentStage >= i ? "bg-red-500" : "bg-border"}`} />
+                <div className={`h-2 rounded-full mb-1 transition-all ${currentStage >= i ? "bg-gradient-to-r from-red-500 to-rose-600" : "bg-border"}`} />
                 <span className={`text-[8px] font-bold ${currentStage >= i ? "text-red-500" : "text-muted-foreground"}`}>{s}</span>
               </div>
             ))}
@@ -161,7 +161,7 @@ function MerchantTracking() {
               </p>
             </div>
             <button onClick={() => {}} className="flex h-9 w-9 items-center justify-center rounded-full bg-card"><MessageCircle className="h-4 w-4" /></button>
-            <button onClick={() => {}} className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500 text-white"><Phone className="h-4 w-4" /></button>
+            <button onClick={() => {}} className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-rose-600 text-white"><Phone className="h-4 w-4" /></button>
           </div>
         </div>
       </div>

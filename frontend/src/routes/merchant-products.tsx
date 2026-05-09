@@ -123,7 +123,7 @@ function MerchantProducts() {
   return (
     <MerchantShell>
       <TopBar title="Product Menu" back={false} right={
-        <button onClick={openAdd} className="flex items-center gap-1 rounded-full bg-red-500 px-3 py-1.5 text-[11px] font-bold text-white active:scale-95">
+        <button onClick={openAdd} className="flex items-center gap-1 rounded-full bg-gradient-to-r from-red-500 to-rose-600 px-3 py-1.5 text-[11px] font-bold text-white active:scale-95">
           <Plus className="h-3.5 w-3.5" /> Add
         </button>
       } />
@@ -138,7 +138,7 @@ function MerchantProducts() {
         {/* Category Chips */}
         <div className="flex gap-2 mb-4">
           {cats.map((c) => (
-            <button key={c} onClick={() => setCat(c)} className={`rounded-full px-3 py-1.5 text-[11px] font-bold capitalize ${cat === c ? "bg-red-500 text-white" : "bg-secondary text-muted-foreground"}`}>
+            <button key={c} onClick={() => setCat(c)} className={`rounded-full px-3 py-1.5 text-[11px] font-bold capitalize ${cat === c ? "bg-gradient-to-r from-red-500 to-rose-600 text-white" : "bg-secondary text-muted-foreground"}`}>
               {c}
             </button>
           ))}
@@ -160,20 +160,20 @@ function MerchantProducts() {
                   {/* Popularity bar */}
                   <div className="mt-1.5 flex items-center gap-2">
                     <div className="h-1.5 flex-1 rounded-full bg-secondary overflow-hidden">
-                      <div className="h-full rounded-full bg-red-500" style={{ width: `${m.popularity}%` }} />
+                      <div className="h-full rounded-full bg-gradient-to-r from-red-500 to-rose-600" style={{ width: `${m.popularity}%` }} />
                     </div>
                     <span className="text-[9px] font-bold text-muted-foreground flex items-center gap-0.5"><TrendingUp className="h-2.5 w-2.5" />{m.popularity}%</span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center gap-4 ml-4">
                   {/* Toggle */}
-                  <button onClick={() => toggleAvailability(m.id)} className={`relative h-6 w-10 rounded-full transition-colors ${m.available ? "bg-green-500" : "bg-muted"}`}>
-                    <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform" style={{ transform: m.available ? "translateX(16px)" : "translateX(2px)" }} />
+                  <button onClick={() => toggleAvailability(m.id)} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${m.available ? "bg-green-500" : "bg-muted"}`}>
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${m.available ? "translate-x-[22px]" : "translate-x-0.5"}`} />
                   </button>
-                  <div className="flex gap-1">
-                    <button onClick={() => openEdit(m)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary text-muted-foreground hover:text-foreground"><Edit3 className="h-3 w-3" /></button>
-                    <button onClick={() => deleteItem(m.id)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20"><Trash2 className="h-3 w-3" /></button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button onClick={() => openEdit(m)} className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-muted-foreground transition-colors hover:bg-secondary/80 hover:text-foreground"><Edit3 className="h-4 w-4" /></button>
+                    <button onClick={() => deleteItem(m.id)} className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-500/10 text-red-500 transition-colors hover:bg-red-500/20"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
               </div>
@@ -198,19 +198,19 @@ function MerchantProducts() {
             <div className="space-y-3">
               <div>
                 <label className="text-[11px] font-semibold text-muted-foreground">Item Name</label>
-                <input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Masala Maggi" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-red-500" />
+                <input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Masala Maggi" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-rose-500" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-semibold text-muted-foreground">Price (₹)</label>
-                  <input type="number" value={formPrice} onChange={(e) => setFormPrice(e.target.value)} placeholder="35" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-red-500" />
+                  <input type="number" value={formPrice} onChange={(e) => setFormPrice(e.target.value)} placeholder="35" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-rose-500" />
                 </div>
                 <div>
                   <label className="text-[11px] font-semibold text-muted-foreground">Stock</label>
-                  <input type="number" value={formStock} onChange={(e) => setFormStock(e.target.value)} placeholder="50" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-red-500" />
+                  <input type="number" value={formStock} onChange={(e) => setFormStock(e.target.value)} placeholder="50" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-rose-500" />
                 </div>
               </div>
-              <button onClick={saveItem} className="w-full rounded-xl bg-red-500 py-3 text-sm font-bold text-white active:scale-[0.98]">
+              <button onClick={saveItem} className="w-full rounded-xl bg-gradient-to-r from-red-500 to-rose-600 py-3 text-sm font-bold text-white active:scale-[0.98]">
                 {editItem ? "Save Changes" : "Add to Menu"}
               </button>
             </div>

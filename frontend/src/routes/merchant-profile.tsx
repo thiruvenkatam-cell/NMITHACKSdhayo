@@ -9,11 +9,14 @@ export const Route = createFileRoute("/merchant-profile")({
   component: MerchantProfile,
 });
 
+import { useMerchantStore } from "@/store/merchantStore";
+
 function MerchantProfile() {
-  const [isOpen, setIsOpen] = useState(true);
+  const { isOpen, setIsOpen } = useMerchantStore();
   const [editing, setEditing] = useState(false);
   const [storeName, setStoreName] = useState("Hostel Canteen");
   const [storeDesc, setStoreDesc] = useState("Quick bites, beverages & stationery for campus life. Open 8 AM – 10 PM.");
+  const [storeImage, setStoreImage] = useState<string | null>(null);
 
   const topProducts = [
     { name: "Masala Maggi Cup", sold: 1240, emoji: "🍜" },
@@ -27,7 +30,7 @@ function MerchantProfile() {
       <TopBar title="Store Profile" back={false} right={
         <button
           onClick={() => { if (editing) toast.success("Profile saved!"); setEditing(!editing); }}
-          className="flex items-center gap-1 rounded-full bg-red-500 px-3 py-1.5 text-[11px] font-bold text-white active:scale-95"
+          className="flex items-center gap-1 rounded-full bg-gradient-to-r from-red-500 to-rose-600 px-3 py-1.5 text-[11px] font-bold text-white active:scale-95"
         >
           <Edit3 className="h-3 w-3" /> {editing ? "Save" : "Edit"}
         </button>
@@ -39,11 +42,27 @@ function MerchantProfile() {
           <div className="p-5 text-white">
             <div className="flex items-start gap-4">
               <div className="relative">
-                <span className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/15 text-4xl ring-4 ring-white/10">🏪</span>
+                {storeImage ? (
+                  <img src={storeImage} alt="Store" className="h-20 w-20 rounded-2xl object-cover ring-4 ring-white/10" />
+                ) : (
+                  <span className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/15 text-4xl ring-4 ring-white/10">🏪</span>
+                )}
                 {editing && (
-                  <button className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-red-500 shadow">
+                  <label className="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white text-red-500 shadow active:scale-95 transition-transform">
                     <Camera className="h-3.5 w-3.5" />
-                  </button>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setStoreImage(URL.createObjectURL(file));
+                          toast.success("Store photo updated!");
+                        }
+                      }} 
+                    />
+                  </label>
                 )}
               </div>
               <div className="flex-1">
@@ -69,9 +88,9 @@ function MerchantProfile() {
               </div>
               <button
                 onClick={() => { setIsOpen(!isOpen); toast(isOpen ? "Store closed" : "Store is now open!"); }}
-                className={`relative h-8 w-14 rounded-full transition-colors ${isOpen ? "bg-green-500" : "bg-white/20"}`}
+                className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors ${isOpen ? "bg-green-500" : "bg-white/20"}`}
               >
-                <span className="absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-transform" style={{ transform: isOpen ? "translateX(24px)" : "translateX(4px)" }} />
+                <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${isOpen ? "translate-x-[28px]" : "translate-x-1"}`} />
               </button>
             </div>
           </div>
@@ -81,7 +100,7 @@ function MerchantProfile() {
         <div className="rounded-2xl border border-border bg-card p-4 mb-4">
           <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">About</h3>
           {editing ? (
-            <textarea value={storeDesc} onChange={(e) => setStoreDesc(e.target.value)} rows={3} className="w-full rounded-xl border border-input bg-background p-3 text-sm outline-none focus:border-red-500 resize-none" />
+            <textarea value={storeDesc} onChange={(e) => setStoreDesc(e.target.value)} rows={3} className="w-full rounded-xl border border-input bg-background p-3 text-sm outline-none focus:border-rose-500 resize-none" />
           ) : (
             <p className="text-sm text-foreground">{storeDesc}</p>
           )}

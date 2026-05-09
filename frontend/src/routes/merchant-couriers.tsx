@@ -60,7 +60,7 @@ function MerchantCouriers() {
         {/* Filter */}
         <div className="flex gap-2 mb-4">
           {(["all", "available", "delivering", "offline"] as const).map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-3 py-1.5 text-[11px] font-bold capitalize ${filter === f ? "bg-red-500 text-white" : "bg-secondary text-muted-foreground"}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-3 py-1.5 text-[11px] font-bold capitalize ${filter === f ? "bg-gradient-to-r from-red-500 to-rose-600 text-white" : "bg-secondary text-muted-foreground"}`}>
               {f}
             </button>
           ))}
@@ -109,7 +109,7 @@ function MerchantCouriers() {
               {c.status === "available" && (
                 <button
                   onClick={() => toast.success(`${c.name} assigned to order!`)}
-                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-red-500 py-2.5 text-xs font-bold text-white transition-transform active:scale-95"
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 py-2.5 text-xs font-bold text-white transition-transform active:scale-95"
                 >
                   <Zap className="h-3.5 w-3.5" /> Assign Courier
                 </button>

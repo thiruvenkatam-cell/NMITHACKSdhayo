@@ -28,10 +28,10 @@ export function MerchantShell({ children }: { children: ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-[240px] md:shrink-0 md:flex-col md:border-r md:border-border md:bg-card md:px-4 md:py-6 lg:w-[260px]">
         <Link to="/merchant" className="flex items-center gap-2 px-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[oklch(0.55_0.22_25)] text-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white">
             <Zap className="h-4 w-4" strokeWidth={3} />
           </span>
-          <span className="text-lg font-bold tracking-tight">UniDrop <span className="text-[10px] font-semibold text-[oklch(0.55_0.22_25)]">MERCHANT</span></span>
+          <span className="text-lg font-bold tracking-tight">UniDrop <span className="text-[10px] font-semibold bg-gradient-to-r from-red-500 to-rose-600 bg-clip-text text-transparent">MERCHANT</span></span>
         </Link>
         <nav className="mt-8 flex-1 space-y-1">
           {tabs.map((t) => {
@@ -41,11 +41,7 @@ export function MerchantShell({ children }: { children: ReactNode }) {
               <Link
                 key={t.to}
                 to={t.to}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors"
-                style={{
-                  background: active ? "oklch(0.55 0.22 25)" : "transparent",
-                  color: active ? "#fff" : "var(--color-foreground)",
-                }}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${active ? "bg-gradient-to-r from-red-500 to-rose-600 text-white" : "text-foreground hover:bg-secondary"}`}
               >
                 <Icon className="h-4 w-4" strokeWidth={2.4} />
                 {t.label}
@@ -81,15 +77,10 @@ export function MerchantShell({ children }: { children: ReactNode }) {
               <li key={t.to} className="flex-1">
                 <Link
                   to={t.to}
-                  className="flex flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium"
-                  style={{ color: active ? "oklch(0.55 0.22 25)" : "var(--color-muted-foreground)" }}
+                  className={`flex flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium ${active ? "text-red-500" : "text-muted-foreground"}`}
                 >
                   <span
-                    className="flex h-9 w-12 items-center justify-center rounded-full transition-all"
-                    style={{
-                      background: active ? "oklch(0.55 0.22 25)" : "transparent",
-                      color: active ? "#fff" : "inherit",
-                    }}
+                    className={`flex h-9 w-12 items-center justify-center rounded-full transition-all ${active ? "bg-gradient-to-r from-red-500 to-rose-600 text-white" : ""}`}
                   >
                     <Icon className="h-[18px] w-[18px]" strokeWidth={2.4} />
                   </span>

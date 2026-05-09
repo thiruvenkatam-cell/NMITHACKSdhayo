@@ -70,43 +70,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "UniDrop" },
-      { name: "description", content: "UniDrop" },
-      { property: "og:title", content: "UniDrop" },
-      { property: "og:description", content: "UniDrop" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-    ],
-  }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
 
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
+import { Toaster } from "sonner";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -120,9 +89,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+<<<<<<< HEAD:src/routes/__root.tsx
       <div className="min-h-screen animate-in fade-in slide-in-from-bottom-4 duration-300">
         <Outlet />
       </div>
+      <Toaster position="top-center" richColors />
     </QueryClientProvider>
   );
 }

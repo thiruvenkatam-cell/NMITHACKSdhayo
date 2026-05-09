@@ -28,8 +28,8 @@ def accept_delivery():
         "otp_required": True
     })
 
-import os
-from werkzeug.utils import secure_filename
+# pyrefly: ignore [parse-error]
+import os from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)

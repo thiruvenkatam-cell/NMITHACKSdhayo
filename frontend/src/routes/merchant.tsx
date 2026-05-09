@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { socketService } from "@/lib/socket";
 import { MerchantShell } from "@/components/MerchantShell";
 import { TopBar } from "@/components/TopBar";
-import { Package, TrendingUp, Clock, Bike, Star, IndianRupee, Bell, ChevronRight, Zap, Users, ArrowUpRight } from "lucide-react";
+import { Package, TrendingUp, Clock, Bike, Star, IndianRupee, Bell, ChevronRight, Zap, Users, ArrowUpRight, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/merchant")({
   head: () => ({
@@ -17,7 +17,10 @@ export const Route = createFileRoute("/merchant")({
   component: Merchant,
 });
 
+import { useMerchantStore } from "@/store/merchantStore";
+
 function Merchant() {
+  const { isOpen } = useMerchantStore();
   const [ordersToday, setOrdersToday] = useState(0);
   const [revenue, setRevenue] = useState(0);
   const [activeDeliveries, setActiveDeliveries] = useState(0);
@@ -101,6 +104,7 @@ function Merchant() {
       default: return "bg-secondary text-foreground";
     }
   };
+  const { totalReceived, totalAccepted, totalPending } = useMerchantStore();
 
   return (
     <MerchantShell>
@@ -108,10 +112,22 @@ function Merchant() {
         title="Lend and Buy"
         back={false}
         right={
-          <Link to="/merchant-orders" className="relative flex h-9 w-9 items-center justify-center rounded-full bg-secondary">
-            <Bell className="h-4 w-4" />
-            <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-card" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-1.5">
+              <CheckCircle2 className="h-3 w-3 text-green-600" />
+              <span className="text-[11px] font-bold text-green-600">{totalAccepted}</span>
+            </div>
+            <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1.5">
+              <Clock className="h-3 w-3 text-amber-600" />
+              <span className="text-[11px] font-bold text-amber-600">{totalPending}</span>
+            </div>
+            <Link to="/merchant-orders" className="relative flex h-9 w-9 items-center justify-center rounded-full bg-secondary">
+              <Bell className="h-4 w-4" />
+              {totalPending > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-rose-600 text-[8px] font-bold text-white ring-2 ring-card">{totalPending}</span>
+              )}
+            </Link>
+          </div>
         }
       />
 
@@ -124,7 +140,7 @@ function Merchant() {
             <p className="text-[11px] opacity-70">NMIT Campus · Ramesh Kumar</p>
           </div>
           <div className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Open
+            <span className={`h-1.5 w-1.5 rounded-full ${isOpen ? "bg-green-400" : "bg-red-400"}`} /> {isOpen ? "Open" : "Closed"}
           </div>
         </div>
 
@@ -148,7 +164,7 @@ function Merchant() {
         {/* Incoming Orders */}
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-bold flex items-center gap-1.5">
-            <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" /></span>
+            <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-gradient-to-r from-red-500 to-rose-600" /></span>
             Live Orders
           </h2>
           <Link to="/merchant-orders" className="text-xs font-semibold text-red-500 flex items-center gap-0.5">View all <ChevronRight className="h-3 w-3" /></Link>
@@ -181,7 +197,7 @@ function Merchant() {
                       toast.error("Failed to update on server");
                     }
                   }}
-                  className="rounded-xl bg-red-500 px-3 py-2 text-[10px] font-bold text-white transition-transform active:scale-95"
+                  className="rounded-xl bg-gradient-to-r from-red-500 to-rose-600 px-3 py-2 text-[10px] font-bold text-white transition-transform active:scale-95"
                 >
                   Accept
                 </button>
