@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
 import { Zap, Mail, Lock, Eye, EyeOff, ArrowRight, User, Phone, Shield, Store } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
@@ -65,19 +67,41 @@ function Login() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isLogin && password !== confirmPassword) return;
+    
     setLoading(true);
-    setTimeout(() => {
-      if (isMerchant) {
-        navigate({ to: "/merchant" });
-      } else if (isLogin) {
-        navigate({ to: "/" });
+    try {
+      if (isLogin) {
+        const endpoint = isMerchant ? "/merchant/login" : "/auth/login";
+        const res = await api.post(endpoint, { email, password });
+        localStorage.setItem("auth_token", res.data.token);
+        toast.success("Logged in successfully");
+        if (isMerchant) {
+          navigate({ to: "/merchant" });
+        } else {
+          navigate({ to: "/" });
+        }
       } else {
-        navigate({ to: "/verify-college" });
+        const endpoint = isMerchant ? "/merchant/signup" : "/auth/register";
+        const payload = isMerchant
+          ? { name, email, phone, password, shop_name: shopName, business_type: "canteen" }
+          : { name, email, phone, password, role: "student" };
+        const res = await api.post(endpoint, payload);
+        localStorage.setItem("auth_token", res.data.token);
+        toast.success("Account created!");
+        if (isMerchant) {
+          navigate({ to: "/merchant" });
+        } else {
+          navigate({ to: "/verify-college" });
+        }
       }
-    }, 800);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetSignup = () => {

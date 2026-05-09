@@ -8,7 +8,9 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 
+import { useEffect } from "react";
 import appCss from "../styles.css?url";
+import { useAuth } from "@/lib/store";
 
 function NotFoundComponent() {
   return (
@@ -108,6 +110,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { fetchUser } = useAuth();
+
+  useEffect(() => {
+    if (localStorage.getItem("auth_token")) {
+      fetchUser();
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

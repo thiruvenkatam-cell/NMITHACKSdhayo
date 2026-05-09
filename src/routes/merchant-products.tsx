@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import { MerchantShell } from "@/components/MerchantShell";
 import { TopBar } from "@/components/TopBar";
 import { Plus, Search, Edit3, Trash2, TrendingUp, Package } from "lucide-react";
@@ -28,7 +29,7 @@ const initialMenu: MenuItem[] = [
 const cats = ["all", "snacks", "drinks", "stationery"];
 
 function MerchantProducts() {
-  const [menu, setMenu] = useState(initialMenu);
+  const [menu, setMenu] = useState<MenuItem[]>(initialMenu);
   const [cat, setCat] = useState("all");
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -37,39 +38,86 @@ function MerchantProducts() {
   const [formPrice, setFormPrice] = useState("");
   const [formStock, setFormStock] = useState("");
 
+  const fetchProducts = async () => {
+    try {
+      const res = await api.get("/merchant/products");
+      if (res.data.products) {
+        const mapped = res.data.products.map((p: any) => ({
+          id: p.product_id,
+          name: p.name,
+          price: p.price,
+          stock: p.stock,
+          available: p.is_available,
+          emoji: p.category === "snacks" ? "🥟" : p.category === "drinks" ? "🧋" : "📦",
+          category: p.category || "snacks",
+          popularity: Math.floor(Math.random() * 100),
+          eta: "5 min"
+        }));
+        setMenu(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to fetch products", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
   const filtered = menu
     .filter((m) => cat === "all" || m.category === cat)
     .filter((m) => m.name.toLowerCase().includes(search.toLowerCase()));
 
-  const toggleAvailability = (id: string) => {
-    setMenu((prev) => prev.map((m) => (m.id === id ? { ...m, available: !m.available } : m)));
+  const toggleAvailability = async (id: string) => {
     const item = menu.find((m) => m.id === id);
-    toast(item?.available ? `${item.name} marked out of stock` : `${item?.name} is available`);
+    if (!item) return;
+    
+    // Optimistic update
+    setMenu((prev) => prev.map((m) => (m.id === id ? { ...m, available: !m.available } : m)));
+    try {
+      await api.put(`/merchant/update-product/${id}`, { is_available: !item.available });
+      toast(item.available ? `${item.name} marked out of stock` : `${item.name} is available`);
+    } catch (err) {
+      toast.error("Failed to update status");
+      fetchProducts(); // revert on fail
+    }
   };
 
-  const deleteItem = (id: string) => {
+  const deleteItem = async (id: string) => {
     const item = menu.find((m) => m.id === id);
-    setMenu((prev) => prev.filter((m) => m.id !== id));
-    toast.success(`${item?.name} removed`);
+    setMenu((prev) => prev.filter((m) => m.id !== id)); // Optimistic
+    try {
+      await api.delete(`/merchant/delete-product/${id}`);
+      toast.success(`${item?.name} removed`);
+    } catch (err) {
+      toast.error("Failed to delete product");
+      fetchProducts(); // revert on fail
+    }
   };
 
   const openAdd = () => { setFormName(""); setFormPrice(""); setFormStock(""); setEditItem(null); setShowAdd(true); };
   const openEdit = (item: MenuItem) => { setFormName(item.name); setFormPrice(String(item.price)); setFormStock(String(item.stock)); setEditItem(item); setShowAdd(true); };
 
-  const saveItem = () => {
+  const saveItem = async () => {
     if (!formName || !formPrice) return;
-    if (editItem) {
-      setMenu((prev) => prev.map((m) => (m.id === editItem.id ? { ...m, name: formName, price: Number(formPrice), stock: Number(formStock) } : m)));
-      toast.success(`${formName} updated`);
-    } else {
-      const newItem: MenuItem = {
-        id: `m${Date.now()}`, name: formName, price: Number(formPrice), stock: Number(formStock) || 0,
-        available: true, emoji: "📦", category: "snacks", popularity: 0, eta: "5 min",
-      };
-      setMenu((prev) => [newItem, ...prev]);
-      toast.success(`${formName} added to menu`);
+    try {
+      if (editItem) {
+        await api.put(`/merchant/update-product/${editItem.id}`, {
+          name: formName, price: Number(formPrice), stock: Number(formStock)
+        });
+        toast.success(`${formName} updated`);
+      } else {
+        await api.post("/merchant/add-product", {
+          name: formName, price: Number(formPrice), stock: Number(formStock) || 0,
+          category: "snacks", description: "", is_available: true
+        });
+        toast.success(`${formName} added to menu`);
+      }
+      setShowAdd(false);
+      fetchProducts();
+    } catch (err) {
+      toast.error("Failed to save product");
     }
-    setShowAdd(false);
   };
 
   return (

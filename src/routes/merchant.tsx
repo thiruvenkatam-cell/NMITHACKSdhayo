@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import { MerchantShell } from "@/components/MerchantShell";
 import { TopBar } from "@/components/TopBar";
 import { Package, TrendingUp, Clock, Bike, Star, IndianRupee, Bell, ChevronRight, Zap, Users, ArrowUpRight } from "lucide-react";
@@ -41,26 +42,35 @@ function Merchant() {
     return () => clearInterval(interval);
   }, []);
 
-  // Simulate live incoming orders
-  useEffect(() => {
-    const initial = [
-      { id: "#ORD-248", items: "Maggi × 2, Coffee", to: "Library Block", time: "Just now", status: "new", emoji: "🍜" },
-      { id: "#ORD-247", items: "Sandwich, Water", to: "Hostel B-402", time: "2m ago", status: "preparing", emoji: "🥪" },
-      { id: "#ORD-246", items: "Coffee × 3", to: "CSE Lab", time: "8m ago", status: "picked", emoji: "☕" },
-    ];
-    setLiveOrders(initial);
+  // Fetch real incoming orders
+  const fetchLiveOrders = async () => {
+    try {
+      const res = await api.get("/merchant/orders");
+      if (res.data.orders) {
+        const mapped = res.data.orders.map((o: any) => ({
+          id: o.order_id || `#ORD-${Math.floor(Math.random() * 900) + 100}`,
+          items: o.items.map((i: any) => `${i.name} × ${i.quantity}`).join(", "),
+          to: o.delivery_location || "Campus",
+          time: new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: o.status === "pending" ? "new" : o.status,
+          emoji: "📦"
+        }));
+        
+        // Show notification for newly arrived orders
+        if (liveOrders.length > 0 && mapped.length > liveOrders.length) {
+            toast.success("📦 New order received!");
+        }
 
-    // Add a new order every 12s
-    const interval = setInterval(() => {
-      const newOrders = [
-        { id: `#ORD-${249 + Math.floor(Math.random() * 100)}`, items: "Pen, Notebook", to: "ECE Dept", time: "Just now", status: "new", emoji: "✏️" },
-        { id: `#ORD-${300 + Math.floor(Math.random() * 100)}`, items: "Maggi, Lemon Tea", to: "Gym Block", time: "Just now", status: "new", emoji: "🍜" },
-        { id: `#ORD-${350 + Math.floor(Math.random() * 100)}`, items: "Printout × 5", to: "Admin Office", time: "Just now", status: "new", emoji: "🖨️" },
-      ];
-      const pick = newOrders[Math.floor(Math.random() * newOrders.length)];
-      setLiveOrders((prev) => [pick, ...prev.slice(0, 5)]);
-      toast("📦 New order received!", { description: `${pick.items} → ${pick.to}` });
-    }, 12000);
+        setLiveOrders(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to fetch live orders", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveOrders();
+    const interval = setInterval(fetchLiveOrders, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -149,9 +159,14 @@ function Merchant() {
               </div>
               {o.status === "new" && (
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setLiveOrders((prev) => prev.map((x) => (x.id === o.id ? { ...x, status: "preparing" } : x)));
                     toast.success("Order accepted!");
+                    try {
+                      await api.post("/merchant/update-order-status", { order_id: o.id, status: "preparing" });
+                    } catch (e) {
+                      toast.error("Failed to update on server");
+                    }
                   }}
                   className="rounded-xl bg-red-500 px-3 py-2 text-[10px] font-bold text-white transition-transform active:scale-95"
                 >

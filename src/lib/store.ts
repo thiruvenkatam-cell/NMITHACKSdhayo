@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { type Product } from './data';
+import { api } from './api';
 
 export interface CartItem extends Product {
   qty: number;
@@ -21,6 +22,8 @@ export interface IncomingOrder {
 let cartItems: CartItem[] = [];
 let isOnline = false;
 let incomingOrder: IncomingOrder | null = null;
+let currentUser: any = null;
+let authLoading: boolean = true;
 
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((l) => l());
@@ -67,6 +70,32 @@ export const runnerActions = {
   },
 };
 
+export const authActions = {
+  setUser: (user: any) => {
+    currentUser = user;
+    authLoading = false;
+    notify();
+  },
+  setLoading: (loading: boolean) => {
+    authLoading = loading;
+    notify();
+  },
+  logout: () => {
+    localStorage.removeItem("auth_token");
+    currentUser = null;
+    notify();
+  },
+  fetchUser: async () => {
+    authActions.setLoading(true);
+    try {
+      const res = await api.get('/auth/me'); // Assuming an endpoint exists, or decode token
+      authActions.setUser(res.data.user);
+    } catch {
+      authActions.setUser(null);
+    }
+  }
+};
+
 // Hooks
 export function useCartStore() {
   const [items, setItems] = useState(cartItems);
@@ -103,3 +132,22 @@ export function useRunnerStore() {
   };
 }
 
+export function useAuth() {
+  const [user, setUser] = useState(currentUser);
+  const [loading, setLoading] = useState(authLoading);
+
+  useEffect(() => {
+    const update = () => {
+      setUser(currentUser);
+      setLoading(authLoading);
+    };
+    listeners.add(update);
+    return () => { listeners.delete(update); };
+  }, []);
+
+  return {
+    user,
+    loading,
+    ...authActions,
+  };
+}

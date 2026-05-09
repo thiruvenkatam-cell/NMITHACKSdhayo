@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { socketService } from "@/lib/socket";
 import { MerchantShell } from "@/components/MerchantShell";
 import { TopBar } from "@/components/TopBar";
 import { Phone, MessageCircle, Star, Navigation, Layers, Clock, Package } from "lucide-react";
@@ -31,28 +32,41 @@ function MerchantTracking() {
   const mapRef = useRef<LeafletMap | null>(null);
   const runnerRef = useRef<unknown>(null);
 
-  // Animate stage progress
+  // Animate stage progress (Simulation fallback)
   useEffect(() => {
     setCurrentStage(selected.stage);
-    const interval = setInterval(() => {
-      setCurrentStage((prev) => (prev < 4 ? prev + 1 : prev));
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [selected]);
-
-  // Animate runner on map
-  useEffect(() => {
-    if (!runnerRef.current) return;
-    let idx = 0;
-    const step = () => {
-      if (!runnerRef.current) return;
-      const pos = ROUTE[(selected.stage * 2 + idx) % ROUTE.length];
-      // @ts-expect-error marker setLatLng
-      runnerRef.current.setLatLng(pos);
-      idx++;
+    
+    // Connect socket
+    const socket = socketService.connect();
+    
+    const handleDeliveryStatus = (data: any) => {
+      if (data.order_id === selected.id) {
+        // Map backend status to 0-4 stage
+        const stageMap: Record<string, number> = {
+          "pending": 0, "accepted": 1, "picked_up": 2, "arriving": 3, "delivered": 4
+        };
+        if (stageMap[data.status] !== undefined) {
+          setCurrentStage(stageMap[data.status]);
+        }
+      }
     };
-    const interval = setInterval(step, 1500);
-    return () => clearInterval(interval);
+    
+    const handleLiveLocation = (data: any) => {
+      if (data.order_id === selected.id || !data.order_id) { // sometimes order_id might not be strictly filtered
+        if (runnerRef.current) {
+          // @ts-expect-error marker setLatLng
+          runnerRef.current.setLatLng([data.lat, data.lng]);
+        }
+      }
+    };
+
+    socket?.on('delivery_status', handleDeliveryStatus);
+    socket?.on('live_location', handleLiveLocation);
+    
+    return () => {
+      socket?.off('delivery_status', handleDeliveryStatus);
+      socket?.off('live_location', handleLiveLocation);
+    };
   }, [selected]);
 
   const handleMapReady = useCallback(async (map: LeafletMap) => {

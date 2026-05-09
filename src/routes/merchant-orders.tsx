@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import { MerchantShell } from "@/components/MerchantShell";
 import { TopBar } from "@/components/TopBar";
 import { Clock, CheckCircle2, XCircle, Bike, ChevronRight, MapPin, Zap, Filter } from "lucide-react";
@@ -36,38 +37,57 @@ function MerchantOrders() {
   const [orders, setOrders] = useState<Order[]>(initial);
   const [filter, setFilter] = useState<string>("all");
 
-  // Simulate incoming orders
+  const fetchOrders = async () => {
+    try {
+      const res = await api.get("/merchant/orders");
+      if (res.data.orders) {
+        // Map backend orders to frontend format
+        const mapped = res.data.orders.map((o: any) => ({
+          id: o.order_id || `#${Math.floor(Math.random() * 900) + 100}`,
+          items: o.items.map((i: any) => `${i.name} × ${i.quantity}`).join(", "),
+          to: o.delivery_location || "Campus",
+          from: "Store",
+          time: new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: o.status === "pending" ? "new" : o.status,
+          urgent: o.total_amount > 100, // Example logic
+          emoji: "📦",
+          total: o.total_amount,
+          runner: o.courier_id || null,
+          eta: "5 min"
+        }));
+        setOrders(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to fetch orders", err);
+    }
+  };
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      const pick = newOrderPool[Math.floor(Math.random() * newOrderPool.length)];
-      const newOrder: Order = {
-        id: `#${232 + Math.floor(Math.random() * 200)}`,
-        items: pick.items!,
-        to: pick.to!,
-        from: "Counter " + (Math.random() > 0.5 ? "1" : "2"),
-        time: "Just now",
-        status: "new",
-        urgent: pick.urgent!,
-        emoji: pick.emoji!,
-        total: pick.total!,
-        runner: null,
-        eta: pick.eta!,
-      };
-      setOrders((prev) => [newOrder, ...prev.slice(0, 9)]);
-      toast("📦 New order!", { description: `${newOrder.items} → ${newOrder.to}` });
-    }, 15000);
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 15000);
     return () => clearInterval(interval);
   }, []);
 
-  const updateStatus = (id: string, status: Order["status"]) => {
+  const updateStatus = async (id: string, status: Order["status"]) => {
+    // Optimistic update
     setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+    try {
+      const backendStatus = status === "new" ? "pending" : status;
+      await api.post("/merchant/update-order-status", { order_id: id, status: backendStatus });
+    } catch (err) {
+      toast.error("Failed to update status on server");
+      fetchOrders(); // Revert on failure
+    }
   };
 
-  const assignRunner = (id: string) => {
-    const runners = ["Aarav S.", "Priya K.", "Rohan M.", "Sneha R."];
-    const runner = runners[Math.floor(Math.random() * runners.length)];
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: "assigned" as const, runner } : o)));
-    toast.success(`Courier ${runner} assigned!`);
+  const assignRunner = async (id: string) => {
+    try {
+      await api.post("/merchant/assign-courier", { order_id: id });
+      toast.success(`Courier assigned!`);
+      fetchOrders();
+    } catch (err) {
+      toast.error("Failed to assign courier");
+    }
   };
 
   const statusBadge = (s: string) => {
