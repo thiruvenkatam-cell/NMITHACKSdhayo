@@ -1,14 +1,5 @@
-from extensions import socketio
+from services.notification_service import send_notification, create_notification
 
-def send_notification(event_type, message):
-    """
-    Broadcasts a real-time notification to all connected clients.
-    event_type: string representing type (e.g. 'MATCH_FOUND')
-    message: string describing the event
-    """
-    payload = {
-        "type": event_type,
-        "message": message
-    }
-    # Emitting to a generalized 'notification' event
-    socketio.emit('notification', payload, broadcast=True)
+# Re-export for backwards compatibility - all existing code that imports
+# from services.notifications will continue to work seamlessly.
+__all__ = ['send_notification', 'create_notification']

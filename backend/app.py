@@ -1,6 +1,3 @@
-import eventlet
-eventlet.monkey_patch()
-
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -18,7 +15,7 @@ def create_app():
     
     # Initialize plugins
     mongo.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
+    socketio.init_app(app, cors_allowed_origins="*", async_mode='threading')
     
     with app.app_context():
         from services.matching import initialize_geospatial_indexes
@@ -31,6 +28,8 @@ def create_app():
     from routes.delivery import delivery_bp
     from routes.rewards import rewards_bp
     from routes.auth import auth_bp
+    from routes.lending import lending_bp
+    from routes.notifications import notifications_bp
     
     app.register_blueprint(orders_bp)
     app.register_blueprint(tracking_bp)
@@ -38,6 +37,8 @@ def create_app():
     app.register_blueprint(delivery_bp)
     app.register_blueprint(rewards_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(lending_bp)
+    app.register_blueprint(notifications_bp)
     
     # Global Error Handler to ensure the frontend never receives HTML error pages
     @app.errorhandler(Exception)
@@ -50,7 +51,19 @@ def create_app():
 
     @app.route('/')
     def home():
-        return jsonify({"message": "UniDrop Backend Running with Socket.IO and MongoDB"})
+        return jsonify({
+            "app": "UniDrop",
+            "tagline": "Powered by Students. Optimized by AI.",
+            "status": "running",
+            "version": "1.0.0-hackathon",
+            "features": [
+                "Campus Quick Commerce",
+                "Student Lending Marketplace",
+                "AI-Powered Matching",
+                "Realtime Tracking",
+                "Gamification & Rewards"
+            ]
+        })
 
     @app.route('/test-db')
     def test_db():
@@ -62,12 +75,33 @@ def create_app():
 
     @app.route('/analytics')
     def analytics():
+        # Pull real counts from MongoDB where possible
+        try:
+            total_deliveries = mongo.db.orders.count_documents({"status": "completed"})
+            pending_orders = mongo.db.orders.count_documents({"status": "pending"})
+            active_lends = mongo.db.lend_requests.count_documents({"status": {"$in": ["pending", "matched", "handed_over"]}})
+            total_users = mongo.db.users.count_documents({})
+        except Exception:
+            total_deliveries = 0
+            pending_orders = 0
+            active_lends = 0
+            total_users = 0
+
         return jsonify({
-            "active_users": 1248,
-            "deliveries_today": 342,
-            "hotspots": 12,
-            "avg_eta_mins": 11,
-            "co2_saved_kg": 142
+            "total_users": total_users,
+            "deliveries_completed": total_deliveries,
+            "pending_orders": pending_orders,
+            "active_lending": active_lends,
+            "active_couriers": max(total_users // 3, 5),
+            "avg_eta_mins": 6,
+            "hotspot_locations": [
+                {"name": "Canteen", "orders": 45},
+                {"name": "Library", "orders": 38},
+                {"name": "Hostel Block A", "orders": 29},
+                {"name": "Main Gate", "orders": 22}
+            ],
+            "co2_saved_kg": round(total_deliveries * 0.42, 1),
+            "platform": "UniDrop"
         })
 
     return app
@@ -75,4 +109,4 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5001)
+    socketio.run(app, debug=True, use_reloader=False, host='0.0.0.0', port=5001, allow_unsafe_werkzeug=True)
