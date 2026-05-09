@@ -110,23 +110,44 @@ function Login() {
     setOtp(["", "", "", "", "", ""]);
   };
 
+  // Merchant color scheme
+  const merchantStyle = isMerchant ? {
+    "--primary": "oklch(0.55 0.22 25)",
+    "--primary-foreground": "#fff",
+    "--brand": "oklch(0.55 0.22 25)",
+    "--brand-foreground": "#fff",
+    "--ring": "oklch(0.55 0.22 25)",
+    "--color-primary": "oklch(0.55 0.22 25)",
+    "--color-primary-foreground": "#fff",
+    "--color-brand": "oklch(0.55 0.22 25)",
+    "--color-brand-foreground": "#fff",
+    "--color-ring": "oklch(0.55 0.22 25)",
+  } as React.CSSProperties : {};
+
+  const heroGradient = isMerchant
+    ? "linear-gradient(180deg, oklch(0.92 0.08 25) 0%, oklch(0.97 0.02 25) 100%)"
+    : undefined;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background transition-colors duration-500" style={merchantStyle}>
       {/* Top gradient section */}
-      <div className="relative overflow-hidden bg-gradient-hero px-6 pb-12 pt-14 md:px-8 md:pt-20">
+      <div
+        className="relative overflow-hidden px-6 pb-12 pt-14 md:px-8 md:pt-20 transition-all duration-500"
+        style={{ backgroundImage: heroGradient || "var(--gradient-hero)" }}
+      >
         {/* Decorative circles */}
-        <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-primary/8" />
-        <div className="absolute -left-8 bottom-0 h-32 w-32 rounded-full bg-primary/6" />
+        <div className={`absolute -right-10 -top-10 h-48 w-48 rounded-full transition-colors duration-500 ${isMerchant ? "bg-red-500/10" : "bg-primary/8"}`} />
+        <div className={`absolute -left-8 bottom-0 h-32 w-32 rounded-full transition-colors duration-500 ${isMerchant ? "bg-rose-500/8" : "bg-primary/6"}`} />
 
         <div className="relative mx-auto max-w-[420px]">
           {/* Logo + Merchant Toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand shadow-pop">
-                <Zap className="h-5 w-5 text-brand-foreground" strokeWidth={3} />
+              <span className={`flex h-11 w-11 items-center justify-center rounded-2xl shadow-pop transition-all duration-500 ${isMerchant ? "bg-gradient-to-r from-red-500 to-rose-600" : "bg-brand"}`}>
+                <Zap className="h-5 w-5 text-white" strokeWidth={3} />
               </span>
               <span className="text-xl font-bold tracking-tight text-foreground">
-                UniDrop
+                UniDrop{isMerchant && <span className="ml-1 text-[10px] font-semibold bg-gradient-to-r from-red-500 to-rose-600 bg-clip-text text-transparent">MERCHANT</span>}
               </span>
             </div>
             <button

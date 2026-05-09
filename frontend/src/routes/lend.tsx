@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/MobileShell";
 import { TopBar } from "@/components/TopBar";
 import { lendItems, LendItem } from "@/lib/data";
 import { Star, Plus } from "lucide-react";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/lend")({
   head: () => ({
@@ -25,6 +26,20 @@ function Lend() {
   const [newPrice, setNewPrice] = useState<number>(15);
   const [newTag, setNewTag] = useState<"Lend" | "Need">("Lend");
 
+  // Fetch listings from backend on mount
+  useEffect(() => {
+    api.get('/lend-requests')
+      .then((res) => {
+        const backendItems = res.data.requests as LendItem[];
+        if (backendItems && backendItems.length > 0) {
+          setItems(backendItems);
+        }
+      })
+      .catch(() => {
+        // Fallback: keep using the local mock data
+      });
+  }, []);
+
   const list = tab === "all" ? items : items.filter((x) => x.tag === tab);
 
   const openListModal = (tag: "Lend" | "Need") => {
@@ -32,7 +47,7 @@ function Lend() {
     setShowListModal(true);
   };
 
-  const handleCreateListing = () => {
+  const handleCreateListing = async () => {
     if (!newTitle.trim()) {
       toast.error("Enter a valid title for your item");
       return;
@@ -53,12 +68,30 @@ function Lend() {
       status: "online",
     };
 
+    // Optimistic UI update
     setItems([newItem, ...items]);
     setShowListModal(false);
     setNewTitle("");
     setNewPrice(15);
     setNewTag("Lend");
     toast.success("Your item has been listed!");
+
+    // Persist to backend
+    try {
+      await api.post('/create-listing', newItem);
+    } catch {
+      // Already added locally, so no rollback needed for demo
+    }
+  };
+
+  const handleRemoveItem = async (itemId: string) => {
+    setItems(items.filter((x) => x.id !== itemId));
+    toast.success("Item removed");
+    try {
+      await api.delete(`/delete-listing/${itemId}`);
+    } catch {
+      // Already removed locally
+    }
   };
 
   return (
@@ -118,8 +151,7 @@ function Lend() {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        setItems(items.filter((x) => x.id !== l.id));
-                        toast.success("Item removed");
+                        handleRemoveItem(l.id);
                       }}
                       className="rounded-full bg-destructive/10 px-3 py-1 text-[11px] font-bold text-destructive transition hover:bg-destructive hover:text-destructive-foreground"
                     >

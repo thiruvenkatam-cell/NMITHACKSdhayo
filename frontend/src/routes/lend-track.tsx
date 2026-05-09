@@ -7,6 +7,7 @@ import MapContainer, { type TileStyle } from "@/components/MapContainer";
 import { useAuth } from "@/lib/store";
 import { Star, MessageCircle, Navigation, CheckCircle2, Circle, Loader2, MapPin, Key, Clock, Award, Shield } from "lucide-react";
 import type { Map as LeafletMap } from "leaflet";
+import { socketService } from "@/lib/socket";
 
 type LendTrackSearch = {
   requestId?: string;
@@ -55,24 +56,49 @@ function LendTrack() {
   const lenderDistance = search.distance || "~150m";
   const lenderRating = search.rating ? parseFloat(search.rating) : 4.9;
 
-  // Auto-advance timeline simulation
+  // Connect to Socket.IO for real-time timeline updates
   useEffect(() => {
-    if (activeStep === 1) {
-      const t = setTimeout(() => setActiveStep(2), 1500);
-      return () => clearTimeout(t);
-    } else if (activeStep === 2) {
-      const t = setTimeout(() => {
-        setLenderInfo({ name: lenderName, distance: lenderDistance, rating: lenderRating });
-        setActiveStep(3);
-      }, 2500);
-      return () => clearTimeout(t);
-    } else if (activeStep === 3) {
-      const t = setTimeout(() => setActiveStep(4), 2000);
-      return () => clearTimeout(t);
-    }
-    // Stop auto-advancing at step 4 (Live tracking) for demo purposes, 
-    // user can manually trigger the rest
-  }, [activeStep, lenderName, lenderDistance, lenderRating]);
+    const socket = socketService.connect();
+    const reqId = search.requestId || `req_${Date.now()}`;
+
+    // Emit start_lend_flow to let the server drive the timeline
+    socket.emit('start_lend_flow', {
+      request_id: reqId,
+      item: 'Requested Item',
+    });
+
+    // Listen for server-driven step updates
+    socket.on('lend_step', (data: any) => {
+      if (data.step) {
+        setActiveStep(data.step);
+      }
+      if (data.match) {
+        setLenderInfo({
+          name: data.match.lender || lenderName,
+          distance: data.match.distance || lenderDistance,
+          rating: data.match.rating || lenderRating,
+        });
+      }
+      if (data.desc) {
+        // Update the step description with backend info
+        toast.info(data.desc);
+      }
+    });
+
+    return () => {
+      socket.off('lend_step');
+    };
+  }, [search.requestId]);
+
+  // Fallback: if no socket events arrive within 3s, use setTimeout
+  useEffect(() => {
+    const fallback = setTimeout(() => {
+      if (activeStep === 1) {
+        setActiveStep(2);
+      }
+    }, 3000);
+    return () => clearTimeout(fallback);
+  }, [activeStep]);
 
   // Leaflet Map Logic
   const handleMapReady = async (map: LeafletMap) => {

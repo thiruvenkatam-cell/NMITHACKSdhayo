@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRunnerStore } from "@/lib/store";
 import { MobileShell } from "@/components/MobileShell";
 import { TopBar } from "@/components/TopBar";
 import { Star, Wallet, Award, Bike, ChevronRight, Settings, ShieldCheck, Heart } from "lucide-react";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/profile")({
   component: Profile,
@@ -11,11 +13,22 @@ export const Route = createFileRoute("/profile")({
 
 function Profile() {
   const { isOnline, setOnline, setIncomingOrder } = useRunnerStore();
+  const [profileData, setProfileData] = useState<any>(null);
+
+  useEffect(() => {
+    api.get('/profile')
+      .then((res) => setProfileData(res.data))
+      .catch(() => {});
+  }, []);
+
+  const stats = profileData?.stats || {};
+  const user = profileData?.user || {};
+  const rank = profileData?.rank || 'Rookie';
 
   const menuItems = [
-    { icon: "📦", label: "My orders", sub: "12 completed", link: "/orders" },
-    { icon: "🤝", label: "My lendings", sub: "5 active", link: "/lend" },
-    { icon: "🏆", label: "Leaderboard", sub: "Rank #8", link: "/leaderboard" },
+    { icon: "📦", label: "My orders", sub: `${stats.deliveries_completed || 12} completed`, link: "/orders" },
+    { icon: "🤝", label: "My lendings", sub: `${stats.items_lent || 5} active`, link: "/lend" },
+    { icon: "🏆", label: "Leaderboard", sub: `${rank}`, link: "/leaderboard" },
     { icon: "⭐", label: "Reviews & ratings", sub: "4.9 average", link: "/" },
     { icon: "🔔", label: "Notifications", sub: "3 unread", link: "/notifications" },
     { icon: "❓", label: "Help & safety", sub: "24/7 campus support", link: "/" },
@@ -41,8 +54,8 @@ function Profile() {
             🧑‍🎓
           </div>
           <div className="flex-1">
-            <p className="text-lg font-bold">Vihaan Reddy</p>
-            <p className="text-[11px] opacity-80">CSE · 3rd year · @vihaan.r</p>
+            <p className="text-lg font-bold">{user.name || 'Vihaan Reddy'}</p>
+            <p className="text-[11px] opacity-80">{user.email || 'CSE · 3rd year · @vihaan.r'}</p>
             <div className="mt-1 flex items-center gap-2 text-[11px]">
               <span className="flex items-center gap-0.5 rounded-full bg-card/15 px-2 py-0.5 font-semibold">
                 <Star className="h-3 w-3 fill-warning text-warning" /> 4.9
@@ -55,9 +68,9 @@ function Profile() {
         </div>
 
         <div className="mt-5 grid grid-cols-3 gap-2">
-          <Mini icon={<Wallet className="h-4 w-4" />} label="Wallet" value="₹420" />
-          <Mini icon={<Award className="h-4 w-4" />} label="Points" value="1,280" />
-          <Mini icon={<Bike className="h-4 w-4" />} label="Drops" value="38" />
+          <Mini icon={<Wallet className="h-4 w-4" />} label="Wallet" value={`₹${stats.wallet_balance || 420}`} />
+          <Mini icon={<Award className="h-4 w-4" />} label="Points" value={`${(stats.points || 1280).toLocaleString()}`} />
+          <Mini icon={<Bike className="h-4 w-4" />} label="Drops" value={`${stats.deliveries_completed || 38}`} />
         </div>
       </div>
 

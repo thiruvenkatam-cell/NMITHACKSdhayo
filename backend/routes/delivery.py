@@ -29,7 +29,8 @@ def accept_delivery():
     })
 
 # pyrefly: ignore [parse-error]
-import os from werkzeug.utils import secure_filename
+import os
+from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)

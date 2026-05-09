@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MobileShell } from "@/components/MobileShell";
 import { TopBar } from "@/components/TopBar";
-import { Bell, Package, Repeat2, Star, Zap, Bike, Gift, Clock, Check } from "lucide-react";
-import { useState } from "react";
+import { Bell, Package, Repeat2, Star, Zap, Bike, Gift, Clock, Check, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
+import { socketService } from "@/lib/socket";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({
@@ -17,7 +19,7 @@ export const Route = createFileRoute("/notifications")({
 
 type Notif = {
   id: string;
-  type: "order" | "lend" | "reward" | "promo" | "runner";
+  type: string;
   title: string;
   body: string;
   time: string;
@@ -26,55 +28,81 @@ type Notif = {
   link?: string;
 };
 
-const mockNotifications: Notif[] = [
-  {
-    id: "n1", type: "order", title: "Order delivered! 🎉",
-    body: "Your Masala Maggi + Cold Coffee has arrived. Rate Aarav!",
-    time: "2 min ago", read: false, emoji: "📦", link: "/orders",
-  },
-  {
-    id: "n2", type: "runner", title: "New delivery request",
-    body: "Samosa × 4 from Tuck Shop → Block C. ₹25 earnings.",
-    time: "5 min ago", read: false, emoji: "🚴",
-  },
-  {
-    id: "n3", type: "lend", title: "Borrow request accepted",
-    body: "Priya K. accepted your Scientific Calculator request.",
-    time: "12 min ago", read: false, emoji: "🤝", link: "/lend",
-  },
-  {
-    id: "n4", type: "reward", title: "Badge unlocked: Speed Demon 🚀",
-    body: "You completed 10 deliveries under 8 minutes!",
-    time: "1 hr ago", read: true, emoji: "🏆", link: "/leaderboard",
-  },
-  {
-    id: "n5", type: "promo", title: "Weekend special!",
-    body: "Free delivery on all orders above ₹100 this Saturday.",
-    time: "3 hr ago", read: true, emoji: "🎁",
-  },
-  {
-    id: "n6", type: "order", title: "Order picked up",
-    body: "Rohan M. picked up your Veg Thali from Mess 2.",
-    time: "Yesterday", read: true, emoji: "📦", link: "/track",
-  },
-  {
-    id: "n7", type: "reward", title: "+50 EXP earned",
-    body: "You received 5 stars for your last delivery. Keep it up!",
-    time: "Yesterday", read: true, emoji: "⭐",
-  },
-  {
-    id: "n8", type: "lend", title: "Return reminder",
-    body: "Please return the HDMI Cable to Rohan M. by 6 PM today.",
-    time: "Yesterday", read: true, emoji: "🔔",
-  },
+const FALLBACK: Notif[] = [
+  { id: "n1", type: "order", title: "Order delivered! 🎉", body: "Your Masala Maggi + Cold Coffee has arrived. Rate Aarav!", time: "2 min ago", read: false, emoji: "📦", link: "/orders" },
+  { id: "n2", type: "runner", title: "New delivery request", body: "Samosa × 4 from Tuck Shop → Block C. ₹25 earnings.", time: "5 min ago", read: false, emoji: "🚴" },
+  { id: "n3", type: "lend", title: "Borrow request accepted", body: "Priya K. accepted your Scientific Calculator request.", time: "12 min ago", read: false, emoji: "🤝", link: "/lend" },
+  { id: "n4", type: "reward", title: "Badge unlocked: Speed Demon 🚀", body: "You completed 10 deliveries under 8 minutes!", time: "1 hr ago", read: true, emoji: "🏆", link: "/leaderboard" },
+  { id: "n5", type: "promo", title: "Weekend special!", body: "Free delivery on all orders above ₹100 this Saturday.", time: "3 hr ago", read: true, emoji: "🎁" },
 ];
 
+function mapBackendNotif(n: any, index: number): Notif {
+  const typeStr = (n.type || "").toLowerCase();
+  let type = "order";
+  let emoji = "🔔";
+  let link: string | undefined;
+
+  if (typeStr.includes("delivery") || typeStr.includes("order")) { type = "order"; emoji = "📦"; link = "/orders"; }
+  else if (typeStr.includes("lend") || typeStr.includes("item")) { type = "lend"; emoji = "🤝"; link = "/lend"; }
+  else if (typeStr.includes("courier") || typeStr.includes("runner")) { type = "runner"; emoji = "🚴"; link = "/track"; }
+  else if (typeStr.includes("badge") || typeStr.includes("xp") || typeStr.includes("reward")) { type = "reward"; emoji = "🏆"; link = "/leaderboard"; }
+
+  const time = n.created_at ? formatTime(n.created_at) : "just now";
+
+  return {
+    id: n.notification_id || `n${index}`,
+    type,
+    title: n.message?.slice(0, 50) || "Notification",
+    body: n.message || "",
+    time,
+    read: n.read ?? false,
+    emoji,
+    link,
+  };
+}
+
+function formatTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const diff = Date.now() - d.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins} min ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} hr ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  } catch { return "recently"; }
+}
+
 function Notifications() {
-  const [notifs, setNotifs] = useState(mockNotifications);
+  const [notifs, setNotifs] = useState<Notif[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/notifications')
+      .then((res) => {
+        const data = (res.data.notifications || []).map(mapBackendNotif);
+        setNotifs(data.length > 0 ? data : FALLBACK);
+      })
+      .catch(() => setNotifs(FALLBACK))
+      .finally(() => setLoading(false));
+
+    // Realtime notifications via Socket.IO
+    const socket = socketService.connect();
+    socket.on('notification', (data: any) => {
+      const newNotif = mapBackendNotif(data, Date.now());
+      setNotifs((prev) => [newNotif, ...prev]);
+      toast(data.message || "New notification", { icon: "🔔" });
+    });
+
+    return () => { socket.off('notification'); };
+  }, []);
+
   const unreadCount = notifs.filter((n) => !n.read).length;
 
   const markAllRead = () => {
     setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
+    api.post('/notifications/read', { user_id: 'demo_user' }).catch(() => {});
     toast.success("All notifications marked as read");
   };
 
@@ -133,43 +161,48 @@ function Notifications() {
           </div>
         )}
 
-        {/* Notification List */}
-        <div className="space-y-2">
-          {notifs.map((n) => {
-            const Wrapper = n.link ? Link : "div";
-            const wrapperProps = n.link ? { to: n.link } : {};
-            return (
-              <Wrapper
-                key={n.id}
-                {...(wrapperProps as any)}
-                onClick={() => markRead(n.id)}
-                className={`flex gap-3 rounded-2xl border p-3.5 transition-all cursor-pointer ${
-                  n.read
-                    ? "border-border bg-card"
-                    : "border-primary/20 bg-primary/5 shadow-sm"
-                }`}
-              >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${typeBg(n.type)}`}>
-                  {typeIcon(n.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className={`text-sm font-semibold leading-tight ${!n.read ? "text-foreground" : ""}`}>
-                      {n.title}
-                    </p>
-                    {!n.read && (
-                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                    )}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {notifs.map((n) => {
+              const Wrapper = n.link ? Link : "div";
+              const wrapperProps = n.link ? { to: n.link } : {};
+              return (
+                <Wrapper
+                  key={n.id}
+                  {...(wrapperProps as any)}
+                  onClick={() => markRead(n.id)}
+                  className={`flex gap-3 rounded-2xl border p-3.5 transition-all cursor-pointer ${
+                    n.read
+                      ? "border-border bg-card"
+                      : "border-primary/20 bg-primary/5 shadow-sm"
+                  }`}
+                >
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${typeBg(n.type)}`}>
+                    {typeIcon(n.type)}
                   </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{n.body}</p>
-                  <p className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-muted-foreground">
-                    <Clock className="h-3 w-3" /> {n.time}
-                  </p>
-                </div>
-              </Wrapper>
-            );
-          })}
-        </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className={`text-sm font-semibold leading-tight ${!n.read ? "text-foreground" : ""}`}>
+                        {n.title}
+                      </p>
+                      {!n.read && (
+                        <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{n.body}</p>
+                    <p className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-muted-foreground">
+                      <Clock className="h-3 w-3" /> {n.time}
+                    </p>
+                  </div>
+                </Wrapper>
+              );
+            })}
+          </div>
+        )}
       </div>
     </MobileShell>
   );

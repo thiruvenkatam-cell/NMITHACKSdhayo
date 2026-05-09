@@ -6,6 +6,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import MapContainer, { type TileStyle } from "@/components/MapContainer";
 import type { Map as LeafletMap } from "leaflet";
+import { socketService } from "@/lib/socket";
 
 export const Route = createFileRoute("/track")({
   head: () => ({
@@ -46,9 +47,44 @@ function Track() {
   const [showTilePicker, setShowTilePicker] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpConfirmed, setOtpConfirmed] = useState(false);
+  const [liveStage, setLiveStage] = useState("On way");
+  const [liveEta, setLiveEta] = useState("4 min");
+  const [liveProgress, setLiveProgress] = useState(55);
+  const [courierName, setCourierName] = useState("Aarav");
   const deliveryOtp = "4827";
   const mapInstanceRef = useRef<LeafletMap | null>(null);
   const runnerMarkerRef = useRef<unknown>(null);
+
+  // Connect to Socket.IO for realtime delivery updates
+  useEffect(() => {
+    const socket = socketService.connect();
+    
+    socket.on('delivery_update', (data: any) => {
+      if (data.stage) setLiveStage(data.stage);
+      if (data.eta) setLiveEta(data.eta);
+      if (data.progress) setLiveProgress(data.progress);
+      if (data.courier) setCourierName(data.courier);
+      if (data.label) toast.info(data.label);
+    });
+
+    socket.on('eta_update', (data: any) => {
+      if (data.eta) setLiveEta(data.eta);
+      if (data.progress) setLiveProgress(data.progress);
+    });
+
+    socket.on('delivery_completed', (data: any) => {
+      setShowOtp(true);
+      setLiveStage("Delivered");
+      setLiveProgress(100);
+      toast.success(data.message || "Order delivered! 🎉");
+    });
+
+    return () => {
+      socket.off('delivery_update');
+      socket.off('eta_update');
+      socket.off('delivery_completed');
+    };
+  }, []);
 
   // Animate the runner marker along remaining route
   useEffect(() => {
@@ -199,7 +235,7 @@ function Track() {
 
   return (
     <MobileShell>
-      <TopBar title="On the way" subtitle="ETA 4 min · 320 m away" back={false} />
+      <TopBar title="On the way" subtitle={`ETA ${liveEta} · ${100 - liveProgress > 0 ? Math.round((100 - liveProgress) * 3.2) : 0}m away`} back={false} />
 
       {/* Real Leaflet map */}
       <div className="relative z-0 h-[360px] overflow-hidden md:h-[520px] md:rounded-3xl">
@@ -273,9 +309,9 @@ function Track() {
             <div key={s} className="flex flex-1 flex-col items-center gap-1">
               <div
                 className="h-1.5 w-full rounded-full"
-                style={{ background: i <= 2 ? "var(--color-primary)" : "var(--color-border)" }}
+                style={{ background: (liveProgress >= (i + 1) * 25) ? "var(--color-primary)" : "var(--color-border)" }}
               />
-              <span className="text-[10px] font-semibold" style={{ color: i <= 2 ? "var(--color-foreground)" : "var(--color-muted-foreground)" }}>{s}</span>
+              <span className="text-[10px] font-semibold" style={{ color: (liveProgress >= (i + 1) * 25) ? "var(--color-foreground)" : "var(--color-muted-foreground)" }}>{s}</span>
             </div>
           ))}
         </div>
@@ -284,7 +320,7 @@ function Track() {
         <div className="mt-4 flex items-center gap-3 rounded-2xl border border-border p-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-2xl">🧑‍🎓</div>
           <div className="flex-1">
-            <p className="text-sm font-semibold">Aarav · Runner</p>
+            <p className="text-sm font-semibold">{courierName} · Runner</p>
             <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <Star className="h-3 w-3 fill-warning text-warning" /> 4.9 · 124 drops · CSE 2nd yr
             </p>

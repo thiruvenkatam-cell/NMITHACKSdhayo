@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { MobileShell } from "@/components/MobileShell";
 import { TopBar } from "@/components/TopBar";
 import { Trophy, Flame, Star, Medal, Bike, Award, ChevronUp, Zap } from "lucide-react";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/leaderboard")({
   head: () => ({
@@ -13,28 +15,55 @@ export const Route = createFileRoute("/leaderboard")({
   component: Leaderboard,
 });
 
-const runners = [
-  { rank: 1, name: "Aarav S.", avatar: "🧑‍🎓", dept: "CSE · 2nd yr", drops: 124, exp: 6200, streak: 14, rating: 4.9 },
-  { rank: 2, name: "Priya K.", avatar: "👩‍🎓", dept: "ECE · 3rd yr", drops: 98, exp: 4900, streak: 8, rating: 4.9 },
-  { rank: 3, name: "Rohan M.", avatar: "🧑", dept: "ME · 2nd yr", drops: 87, exp: 4350, streak: 6, rating: 4.7 },
-  { rank: 4, name: "Sneha R.", avatar: "👩", dept: "IT · 3rd yr", drops: 72, exp: 3600, streak: 4, rating: 4.6 },
-  { rank: 5, name: "Kabir J.", avatar: "🧑‍💻", dept: "Design · 2nd yr", drops: 65, exp: 3250, streak: 3, rating: 4.5 },
-  { rank: 6, name: "Meera P.", avatar: "👩‍🔬", dept: "Chem · 4th yr", drops: 58, exp: 2900, streak: 2, rating: 4.8 },
-  { rank: 7, name: "Arjun T.", avatar: "🧑‍🔧", dept: "Civil · 3rd yr", drops: 45, exp: 2250, streak: 1, rating: 4.4 },
-  { rank: 8, name: "You", avatar: "🧑‍🎓", dept: "CSE · 3rd yr", drops: 38, exp: 1280, streak: 2, rating: 4.9 },
-];
-
-const badges = [
-  { emoji: "🚀", name: "Speed Demon", desc: "10 deliveries under 8 min", earned: true },
-  { emoji: "🔥", name: "Hot Streak", desc: "7-day delivery streak", earned: true },
-  { emoji: "⭐", name: "5-Star Runner", desc: "Maintain 4.8+ rating", earned: true },
-  { emoji: "🏆", name: "Century Club", desc: "Complete 100 deliveries", earned: false },
-  { emoji: "🌙", name: "Night Owl", desc: "10 deliveries after 10 PM", earned: false },
-  { emoji: "💎", name: "Diamond Tier", desc: "Reach 10,000 EXP", earned: false },
-];
-
 function Leaderboard() {
+  const fallbackRunners = [
+    { rank: 1, name: "Aarav S.", avatar: "🧑‍🎓", dept: "CSE · 2nd yr", drops: 124, exp: 6200, streak: 14, rating: 4.9 },
+    { rank: 2, name: "Priya K.", avatar: "👩‍🎓", dept: "ECE · 3rd yr", drops: 98, exp: 4900, streak: 8, rating: 4.9 },
+    { rank: 3, name: "Rohan M.", avatar: "🧑", dept: "ME · 2nd yr", drops: 87, exp: 4350, streak: 6, rating: 4.7 },
+    { rank: 4, name: "Sneha R.", avatar: "👩", dept: "IT · 3rd yr", drops: 72, exp: 3600, streak: 4, rating: 4.6 },
+    { rank: 5, name: "Kabir J.", avatar: "🧑‍💻", dept: "Design · 2nd yr", drops: 65, exp: 3250, streak: 3, rating: 4.5 },
+    { rank: 6, name: "Meera P.", avatar: "👩‍🔬", dept: "Chem · 4th yr", drops: 58, exp: 2900, streak: 2, rating: 4.8 },
+    { rank: 7, name: "Arjun T.", avatar: "🧑‍🔧", dept: "Civil · 3rd yr", drops: 45, exp: 2250, streak: 1, rating: 4.4 },
+    { rank: 8, name: "You", avatar: "🧑‍🎓", dept: "CSE · 3rd yr", drops: 38, exp: 1280, streak: 2, rating: 4.9 },
+  ];
+
+  const [runners, setRunners] = useState(fallbackRunners);
+
+  useEffect(() => {
+    api.get('/leaderboard')
+      .then((res) => {
+        const board = res.data.leaderboard || [];
+        if (board.length > 0) {
+          // Merge backend data with fallback to always have 8 entries
+          const merged = board.map((b: any, i: number) => ({
+            rank: b.rank || i + 1,
+            name: b.name,
+            avatar: "🧑‍🎓",
+            dept: b.badge || "Campus",
+            drops: Math.floor((b.xp || 0) / 50),
+            exp: b.xp || 0,
+            streak: Math.min(Math.floor((b.xp || 0) / 200), 30),
+            rating: 4.5 + Math.random() * 0.5,
+          }));
+          // Pad with fallback if less than 8
+          const final = [...merged, ...fallbackRunners.slice(merged.length)].slice(0, 8)
+            .map((r: any, i: number) => ({ ...r, rank: i + 1 }));
+          setRunners(final);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const you = runners[runners.length - 1];
+
+  const badges = [
+    { emoji: "🚀", name: "Speed Demon", desc: "10 deliveries under 8 min", earned: true },
+    { emoji: "🔥", name: "Hot Streak", desc: "7-day delivery streak", earned: true },
+    { emoji: "⭐", name: "5-Star Runner", desc: "Maintain 4.8+ rating", earned: true },
+    { emoji: "🏆", name: "Century Club", desc: "Complete 100 deliveries", earned: false },
+    { emoji: "🌙", name: "Night Owl", desc: "10 deliveries after 10 PM", earned: false },
+    { emoji: "💎", name: "Diamond Tier", desc: "Reach 10,000 EXP", earned: false },
+  ];
 
   return (
     <MobileShell>

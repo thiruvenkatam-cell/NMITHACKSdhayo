@@ -1,8 +1,9 @@
 from flask import Blueprint, jsonify, request
 from extensions import socketio, mongo
-from flask_socketio import join_room, leave_room
+from flask_socketio import join_room, leave_room, emit
 import threading
 import time
+import datetime
 
 tracking_bp = Blueprint('tracking_bp', __name__)
 
@@ -136,3 +137,139 @@ def handle_chat_message(data):
             'sender': sender,
             'message': message
         }, to=order_id)
+
+
+# ─── Lending Timeline Socket Events ──────────────────────────────
+
+LENDING_STEPS = [
+    {"id": 1, "title": "Request Item", "desc": "Request placed securely."},
+    {"id": 2, "title": "AI Match", "desc": "Finding the best peer nearby..."},
+    {"id": 3, "title": "Lender Accepts", "desc": "Lender confirmed the request."},
+    {"id": 4, "title": "Live Tracking", "desc": "Meet at the designated spot."},
+    {"id": 5, "title": "OTP Handover", "desc": "Share OTP to receive item."},
+    {"id": 6, "title": "Return Reminder", "desc": "Automated safe-return tracking."},
+    {"id": 7, "title": "Ratings & Rewards", "desc": "Earn campus rep points."},
+]
+
+
+@socketio.on('start_lend_flow')
+def handle_start_lend_flow(data):
+    """Start the lending timeline progression for a request."""
+    request_id = data.get('request_id', f'req_{int(datetime.datetime.utcnow().timestamp() * 1000)}')
+    item_title = data.get('item', 'Item')
+
+    join_room(request_id)
+
+    # Step 1: Request Item (immediate)
+    emit('lend_step', {
+        'request_id': request_id,
+        'step': 1,
+        'title': 'Request Item',
+        'desc': f'Request for "{item_title}" placed securely.',
+    }, to=request_id)
+
+    # Run the AI matching simulation in a background thread
+    from flask import current_app
+    app = current_app._get_current_object()
+
+    def run_lend_simulation(app, request_id, item_title):
+        with app.app_context():
+            import time as _time
+
+            # Step 2: AI Match (after 1.5s)
+            _time.sleep(1.5)
+            from services.matching import calculate_lend_match
+            match = calculate_lend_match({'item': item_title})
+            socketio.emit('lend_step', {
+                'request_id': request_id,
+                'step': 2,
+                'title': 'AI Match',
+                'desc': f'Matched with {match["lender"]} ({match["match_score"]} score)',
+                'match': match,
+            }, to=request_id)
+
+            # Step 3: Lender Accepts (after 2.5s)
+            _time.sleep(2.5)
+            socketio.emit('lend_step', {
+                'request_id': request_id,
+                'step': 3,
+                'title': 'Lender Accepts',
+                'desc': f'{match["lender"]} accepted! Heading your way.',
+                'match': match,
+            }, to=request_id)
+
+            # Step 4: Live Tracking (after 2s)
+            _time.sleep(2)
+            socketio.emit('lend_step', {
+                'request_id': request_id,
+                'step': 4,
+                'title': 'Live Tracking',
+                'desc': 'Meet at the designated spot.',
+                'match': match,
+            }, to=request_id)
+
+            # Steps 5-7 are triggered by user actions (OTP verify, return, rate)
+
+    import threading
+    thread = threading.Thread(
+        target=run_lend_simulation,
+        args=(app, request_id, item_title)
+    )
+    thread.daemon = True
+    thread.start()
+
+
+@socketio.on('verify_handover_otp')
+def handle_verify_otp(data):
+    """Verify OTP and advance to step 5."""
+    request_id = data.get('request_id')
+    otp = data.get('otp')
+
+    from services.otp import verify_otp
+    if verify_otp(request_id, otp):
+        emit('lend_step', {
+            'request_id': request_id,
+            'step': 5,
+            'title': 'OTP Handover',
+            'desc': 'Item handed over successfully!',
+            'verified': True,
+        }, to=request_id)
+    else:
+        emit('otp_error', {'message': 'Invalid OTP, try again.'}, to=request_id)
+
+
+@socketio.on('confirm_return')
+def handle_confirm_return(data):
+    """Mark item as returned, advance to step 6."""
+    request_id = data.get('request_id')
+    emit('lend_step', {
+        'request_id': request_id,
+        'step': 6,
+        'title': 'Return Reminder',
+        'desc': 'Item returned safely.',
+    }, to=request_id)
+
+
+@socketio.on('submit_rating')
+def handle_submit_rating(data):
+    """Submit rating and complete the flow."""
+    request_id = data.get('request_id')
+    rating = data.get('rating', 5)
+    review = data.get('review', '')
+
+    # Persist rating
+    from extensions import mongo
+    mongo.db.ratings.insert_one({
+        'request_id': request_id,
+        'rating': rating,
+        'review': review,
+        'created_at': datetime.datetime.utcnow()
+    })
+
+    emit('lend_step', {
+        'request_id': request_id,
+        'step': 7,
+        'title': 'Ratings & Rewards',
+        'desc': f'Rated {rating}⭐ — You earned 50 XP!',
+        'completed': True,
+    }, to=request_id)

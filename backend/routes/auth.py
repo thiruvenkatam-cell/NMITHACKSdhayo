@@ -210,3 +210,53 @@ def verify_otp():
             "xp": user.get('xp', 0)
         }
     })
+
+
+@auth_bp.route('/profile', methods=['GET'])
+def get_profile():
+    """Get full user profile with stats, badges, and activity."""
+    user_id = request.args.get('user_id', 'demo_user')
+    email = request.args.get('email')
+
+    query = {"email": email} if email else {"user_id": user_id}
+    user = mongo.db.users.find_one(query, {"_id": 0, "password": 0})
+
+    if not user:
+        # Return demo profile if no user found
+        user = {
+            "user_id": "demo_user",
+            "name": "Demo Student",
+            "email": "demo@nmit.ac.in",
+            "xp": 420,
+            "badges": ["Speed Courier"],
+            "role": "student"
+        }
+
+    xp = user.get("xp", 0)
+
+    # Calculate rank
+    if xp >= 2500: rank = "Legend"
+    elif xp >= 1000: rank = "Campus Hero"
+    elif xp >= 500: rank = "Night Owl"
+    elif xp >= 300: rank = "Trusted Lender"
+    elif xp >= 100: rank = "Speed Courier"
+    else: rank = "Rookie"
+
+    # Activity stats
+    deliveries = mongo.db.merchant_orders.count_documents({"courier_id": user.get("user_id"), "status": "delivered"})
+    lendings = mongo.db.lend_requests.count_documents({"lender_id": user.get("user_id"), "status": "returned"})
+    orders_placed = mongo.db.merchant_orders.count_documents({"requester_id": user.get("user_id")})
+
+    return jsonify({
+        "user": user,
+        "rank": rank,
+        "stats": {
+            "deliveries_completed": deliveries,
+            "items_lent": lendings,
+            "orders_placed": orders_placed,
+            "streak": min(deliveries + lendings, 30),
+            "wallet_balance": 420,
+            "points": xp
+        }
+    })
+

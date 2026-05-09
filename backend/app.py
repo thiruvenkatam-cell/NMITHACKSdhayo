@@ -30,6 +30,7 @@ def create_app():
     from routes.auth import auth_bp
     from routes.lending import lending_bp
     from routes.notifications import notifications_bp
+    from routes.chat import chat_bp
     
     # Merchant Blueprints
     from routes.merchant_auth import merchant_auth_bp
@@ -45,6 +46,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(lending_bp)
     app.register_blueprint(notifications_bp)
+    app.register_blueprint(chat_bp)
     
     # Register merchant blueprints
     app.register_blueprint(merchant_auth_bp)
