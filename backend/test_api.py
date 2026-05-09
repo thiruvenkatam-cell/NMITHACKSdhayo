@@ -1,6 +1,13 @@
 import urllib.request, json
 
-endpoints = ['/', '/test-db', '/analytics', '/tracking', '/match-route', '/leaderboard', '/rewards?user_id=demo_user', '/notifications?user_id=demo_user', '/lend-requests']
+endpoints = [
+    '/', '/test-db', '/analytics', '/tracking', '/match-route', '/leaderboard', 
+    '/rewards?user_id=demo_user', '/notifications?user_id=demo_user', '/lend-requests',
+    '/merchant/products?merchant_id=demo_merchant_1', 
+    '/merchant/orders?merchant_id=demo_merchant_1',
+    '/merchant/analytics?merchant_id=demo_merchant_1',
+    '/merchant/dashboard?merchant_id=demo_merchant_1'
+]
 results = []
 for ep in endpoints:
     try:
@@ -15,6 +22,8 @@ for ep, payload in [
     ('/create-order', {'item':'Maggie','pickup':'Canteen','drop':'Library','priority':'urgent'}),
     ('/request-item', {'item':'Calculator','duration':'2 hours','reward':50,'pickup':'Library'}),
     ('/tracking/simulate', {'order_id':'test_demo'}),
+    ('/merchant/login', {'email':'merchant@nmit.ac.in', 'password':'123456'}),
+    ('/merchant/add-product', {'name':'Testing Product', 'price':10, 'merchant_id':'demo_merchant_1'}),
 ]:
     try:
         body = json.dumps(payload).encode()

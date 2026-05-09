@@ -31,6 +31,12 @@ def create_app():
     from routes.lending import lending_bp
     from routes.notifications import notifications_bp
     
+    # Merchant Blueprints
+    from routes.merchant_auth import merchant_auth_bp
+    from routes.merchant_products import merchant_products_bp
+    from routes.merchant_orders import merchant_orders_bp
+    from routes.merchant_analytics import merchant_analytics_bp
+    
     app.register_blueprint(orders_bp)
     app.register_blueprint(tracking_bp)
     app.register_blueprint(ai_bp)
@@ -39,6 +45,12 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(lending_bp)
     app.register_blueprint(notifications_bp)
+    
+    # Register merchant blueprints
+    app.register_blueprint(merchant_auth_bp)
+    app.register_blueprint(merchant_products_bp)
+    app.register_blueprint(merchant_orders_bp)
+    app.register_blueprint(merchant_analytics_bp)
     
     # Global Error Handler to ensure the frontend never receives HTML error pages
     @app.errorhandler(Exception)
