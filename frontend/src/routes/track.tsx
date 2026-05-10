@@ -220,26 +220,6 @@ function Track() {
 
   return (
     <MobileShell>
-<<<<<<< HEAD
-      <TopBar title="On the way" subtitle={`ETA ${liveEta} · ${100 - liveProgress > 0 ? Math.round((100 - liveProgress) * 3.2) : 0}m away`} back={false} />
-
-      {/* Real Leaflet map */}
-      <div className="relative z-0 h-[360px] overflow-hidden md:h-[520px] md:rounded-3xl">
-        <MapContainer
-          center={MAP_CENTER}
-          zoom={16}
-          tileStyle={tileStyle}
-          hideZoomControl={false}
-          className="h-full w-full"
-          onMapReady={handleMapReady}
-        />
-
-        {/* Tile style switcher FAB */}
-        <div className="absolute right-3 top-3 z-[1000]">
-          <button
-            onClick={() => setShowTilePicker(!showTilePicker)}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-pop transition-transform hover:scale-105 active:scale-95"
-=======
       <TopBar
         title={isLive ? "Courier Mode" : "On the way"}
         subtitle={
@@ -262,7 +242,6 @@ function Track() {
               background: isLive ? "var(--color-success)" : "var(--color-secondary)",
               color: isLive ? "var(--color-success-foreground)" : "var(--color-secondary-foreground)",
             }}
->>>>>>> 7a315c0 (Update logo, refined UI, chat and rating overlays)
           >
             <motion.span
               className="inline-block h-2 w-2 rounded-full"
