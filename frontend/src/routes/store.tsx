@@ -38,11 +38,13 @@ function Store() {
             category: p.category || "snacks",
             shop: "Hostel Canteen",
             unit: "1 serve",
-            emoji: p.category === "snacks" ? "🥟" : p.category === "drinks" ? "🧋" : "📦",
+            emoji: p.emoji || (p.category === "snacks" ? "🥟" : p.category === "drinks" ? "🧋" : "📦"),
             bg: "linear-gradient(135deg, oklch(0.9 0.1 20), oklch(0.85 0.1 30))",
             eta: "5 min"
           }));
-          setDbProducts(mapped);
+          
+          // Merge database products with the beautiful static products
+          setDbProducts([...mapped, ...products]);
         } else {
           setDbProducts(products);
         }
