@@ -217,6 +217,7 @@ function Index() {
           {categories.map((c) => (
             <Link
               to="/store"
+              search={{ cat: c.id }}
               key={c.id}
               className="flex w-[78px] shrink-0 flex-col items-center gap-1.5 rounded-2xl border border-border bg-card p-2 shadow-card md:w-auto md:p-3"
             >

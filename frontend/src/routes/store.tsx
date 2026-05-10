@@ -15,11 +15,15 @@ export const Route = createFileRoute("/store")({
       { name: "description", content: "Snacks, meals, drinks and supplies from your campus shops." },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    cat: (search.cat as string) || "all",
+  }),
   component: Store,
 });
 
 function Store() {
-  const [active, setActive] = useState<string>("all");
+  const { cat } = Route.useSearch();
+  const [active, setActive] = useState<string>(cat);
   const [dbProducts, setDbProducts] = useState<any[]>([]);
 
   useEffect(() => {

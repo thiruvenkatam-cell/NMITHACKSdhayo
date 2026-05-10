@@ -1,6 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { Home, ShoppingBag, Package, BarChart3, User, Zap, LogOut } from "lucide-react";
+import { Home, ShoppingBag, Package, BarChart3, User, LogOut } from "lucide-react";
 import type { ReactNode } from "react";
+import { CustomLogo } from "@/components/Logo";
 
 const tabs = [
   { to: "/merchant", label: "Home", icon: Home },
@@ -29,7 +30,7 @@ export function MerchantShell({ children }: { children: ReactNode }) {
       <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-[240px] md:shrink-0 md:flex-col md:border-r md:border-border md:bg-card md:px-4 md:py-6 lg:w-[260px]">
         <Link to="/merchant" className="flex items-center gap-2 px-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white">
-            <Zap className="h-4 w-4" strokeWidth={3} />
+            <CustomLogo className="h-5 w-5" />
           </span>
           <span className="text-lg font-bold tracking-tight">UniDrop <span className="text-[10px] font-semibold bg-gradient-to-r from-red-500 to-rose-600 bg-clip-text text-transparent">MERCHANT</span></span>
         </Link>

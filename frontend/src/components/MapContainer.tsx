@@ -8,6 +8,7 @@ import type {
 
 export type TileStyle =
   | "streets"     // CartoDB Voyager — clean, colourful, Google-Maps-like
+  | "light"       // CartoDB Positron — minimalist monochrome light
   | "dark"        // CartoDB Dark Matter — sleek dark mode
   | "satellite"   // Esri World Imagery
   | "watercolor"  // Stadia Watercolor — artistic / hand-drawn
@@ -17,6 +18,12 @@ export type TileStyle =
 const TILE_URLS: Record<TileStyle, { url: string; attribution: string; maxZoom?: number }> = {
   streets: {
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 20,
+  },
+  light: {
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
     maxZoom: 20,

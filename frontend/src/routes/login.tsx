@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { Zap, Mail, Lock, Eye, EyeOff, ArrowRight, User, Phone, Shield, Store } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, User, Phone, Shield, Store } from "lucide-react";
+import { CustomLogo } from "@/components/Logo";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -143,8 +144,8 @@ function Login() {
           {/* Logo + Merchant Toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <span className={`flex h-11 w-11 items-center justify-center rounded-2xl shadow-pop transition-all duration-500 ${isMerchant ? "bg-gradient-to-r from-red-500 to-rose-600" : "bg-brand"}`}>
-                <Zap className="h-5 w-5 text-white" strokeWidth={3} />
+              <span className={`flex h-11 w-11 items-center justify-center rounded-2xl shadow-pop transition-all duration-500 ${isMerchant ? "bg-gradient-to-r from-red-500 to-rose-600 text-white" : "bg-brand text-brand-foreground"}`}>
+                <CustomLogo className="h-6 w-6" />
               </span>
               <span className="text-xl font-bold tracking-tight text-foreground">
                 UniDrop{isMerchant && <span className="ml-1 text-[10px] font-semibold bg-gradient-to-r from-red-500 to-rose-600 bg-clip-text text-transparent">MERCHANT</span>}

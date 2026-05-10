@@ -3,6 +3,7 @@ import { Home, ShoppingBag, Repeat2, MapPin, User, Zap, LogOut } from "lucide-re
 import type { ReactNode } from "react";
 import { IncomingOrderPopup } from "./IncomingOrderPopup";
 import { GlobalFloatingCart } from "./GlobalFloatingCart";
+import { CustomLogo } from "@/components/Logo";
 
 const tabs = [
   { to: "/", label: "Home", icon: Home },
@@ -24,10 +25,10 @@ export function MobileShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background md:flex">
       {/* Desktop sidebar */}
-      <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-[240px] md:shrink-0 md:flex-col md:border-r md:border-border md:bg-card md:px-4 md:py-6 lg:w-[280px]">
+      <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-[240px] md:shrink-0 md:flex-col md:border-r md:border-black md:bg-card md:px-4 md:py-6 lg:w-[280px]">
         <Link to="/" className="flex items-center gap-2 px-2 py-1">
           <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand text-brand-foreground">
-            <Zap className="h-5 w-5" strokeWidth={3} />
+            <CustomLogo className="h-6 w-6" />
           </span>
           <span className="text-lg font-bold tracking-tight">UniDrop</span>
         </Link>
@@ -75,33 +76,33 @@ export function MobileShell({ children }: { children: ReactNode }) {
       {/* Mobile bottom nav */}
       {!hideMobileNav && (
         <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] border-t border-border bg-card/95 px-2 pb-3 pt-2 backdrop-blur md:hidden" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
-        <ul className="flex items-center justify-between gap-1">
-          {tabs.map((t) => {
-            const active = isActive(t.to);
-            const Icon = t.icon;
-            return (
-              <li key={t.to} className="flex-1">
-                <Link
-                  to={t.to}
-                  aria-current={active ? "page" : undefined}
-                  className="flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[11px] font-medium transition-all duration-200"
-                  style={{ color: active ? "var(--color-primary)" : "var(--color-muted-foreground)" }}
-                >
-                  <span
-                    className="flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200"
-                    style={{
-                      background: active ? "var(--color-brand)" : "transparent",
-                      color: active ? "var(--color-brand-foreground)" : "inherit",
-                    }}
+          <ul className="flex items-center justify-between gap-1">
+            {tabs.map((t) => {
+              const active = isActive(t.to);
+              const Icon = t.icon;
+              return (
+                <li key={t.to} className="flex-1">
+                  <Link
+                    to={t.to}
+                    aria-current={active ? "page" : undefined}
+                    className="flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[11px] font-medium transition-all duration-200"
+                    style={{ color: active ? "var(--color-primary)" : "var(--color-muted-foreground)" }}
                   >
-                    <Icon className="h-[18px] w-[18px]" strokeWidth={2.4} />
-                  </span>
-                  {t.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+                    <span
+                      className="flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200"
+                      style={{
+                        background: active ? "var(--color-brand)" : "transparent",
+                        color: active ? "var(--color-brand-foreground)" : "inherit",
+                      }}
+                    >
+                      <Icon className="h-[18px] w-[18px]" strokeWidth={2.4} />
+                    </span>
+                    {t.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
       )}
       <IncomingOrderPopup />

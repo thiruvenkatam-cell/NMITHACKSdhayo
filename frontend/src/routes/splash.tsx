@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Zap } from "lucide-react";
+import { CustomLogo } from "@/components/Logo";
 
 export const Route = createFileRoute("/splash")({
   head: () => ({
@@ -57,7 +57,7 @@ function Splash() {
             transform: phase >= 0 ? "translateY(0) scale(1)" : "translateY(30px) scale(0.8)",
           }}
         >
-          <Zap className="h-12 w-12 text-brand-foreground" strokeWidth={2.5} />
+          <CustomLogo className="h-12 w-12 text-brand-foreground" />
         </div>
 
         {/* App name */}

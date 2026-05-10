@@ -1,59 +1,127 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MobileShell } from "@/components/MobileShell";
 import { TopBar } from "@/components/TopBar";
-import { Phone, MessageCircle, Star, Navigation, Layers, ShieldCheck, Copy } from "lucide-react";
-import { useState, useCallback, useRef, useEffect } from "react";
+import {
+  Phone,
+  MessageCircle,
+  Star,
+  ShieldCheck,
+  Copy,
+  MapPin,
+  Clock,
+  Sparkles,
+  Package,
+  CheckCircle2,
+  Navigation,
+  Bike,
+  Radio,
+} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+<<<<<<< HEAD
 import MapContainer, { type TileStyle } from "@/components/MapContainer";
 import type { Map as LeafletMap } from "leaflet";
 import { socketService } from "@/lib/socket";
+=======
+import { motion, AnimatePresence } from "framer-motion";
+import { CourierAvatar } from "@/components/courier/CourierAvatar";
+import { CourierFlow } from "@/components/courier/CourierFlow";
+import { ChatOverlay } from "@/components/ChatOverlay";
+import { RatingOverlay } from "@/components/RatingOverlay";
+>>>>>>> 7a315c0 (Update logo, refined UI, chat and rating overlays)
 
 export const Route = createFileRoute("/track")({
   head: () => ({
     meta: [
-      { title: "Track delivery — live map & ETA" },
-      { name: "description", content: "Real-time tracking and ETA for your campus delivery or lend handover." },
+      { title: "Track delivery \u2014 live ETA" },
+      {
+        name: "description",
+        content:
+          "Real-time avatar tracking and ETA for your campus delivery or lend handover.",
+      },
     ],
   }),
   component: Track,
 });
 
-// Campus route waypoints (simulated delivery path)
-const ROUTE_COORDS: [number, number][] = [
-  [19.1334, 72.9133], // origin — canteen
-  [19.1338, 72.9140],
-  [19.1345, 72.9148],
-  [19.1352, 72.9155],
-  [19.1360, 72.9158],
-  [19.1368, 72.9162],
-  [19.1375, 72.9170],
-  [19.1380, 72.9178], // runner current position
-  [19.1386, 72.9185],
-  [19.1392, 72.9190],
-  [19.1398, 72.9195], // destination — hostel
+/* ------------------------------------------------------------------ */
+/*  DATA                                                              */
+/* ------------------------------------------------------------------ */
+
+interface CourierData {
+  name: string;
+  gender: "male" | "female";
+  rating: number;
+  drops: number;
+  dept: string;
+  aiMatch: number;
+}
+
+const courier: CourierData = {
+  name: "Rahul K.",
+  gender: "male",
+  rating: 4.9,
+  drops: 124,
+  dept: "CSE 2nd yr",
+  aiMatch: 94,
+};
+
+const STAGES = [
+  { label: "Accepted", icon: CheckCircle2, emoji: "\u2705" },
+  { label: "Picking Up", icon: Package, emoji: "\uD83D\uDCE6" },
+  { label: "On The Way", icon: Bike, emoji: "\uD83D\uDEB4" },
+  { label: "Near You", icon: Navigation, emoji: "\uD83D\uDCCD" },
+  { label: "Delivered", icon: Sparkles, emoji: "\uD83C\uDF89" },
+] as const;
+
+const CAMPUS_LABELS = [
+  "Leaving Canteen Area",
+  "Passing through Block A",
+  "Using Library Shortcut",
+  "Crossing Main Corridor",
+  "Near Hostel Entrance",
+  "Approaching your block",
+  "At your door",
 ];
 
-const ORIGIN = ROUTE_COORDS[0];
-const DESTINATION = ROUTE_COORDS[ROUTE_COORDS.length - 1];
-const RUNNER_INDEX = 7; // runner is ~70% along the route
-const RUNNER_POS = ROUTE_COORDS[RUNNER_INDEX];
-const MAP_CENTER: [number, number] = [
-  (ORIGIN[0] + DESTINATION[0]) / 2,
-  (ORIGIN[1] + DESTINATION[1]) / 2,
+const ROUTE_LANDMARKS = [
+  { emoji: "\uD83C\uDF54", label: "Canteen" },
+  { emoji: "\uD83C\uDFEB", label: "Block A" },
+  { emoji: "\uD83D\uDCDA", label: "Library" },
+  { emoji: "\uD83C\uDFE0", label: "Hostel" },
+  { emoji: "\uD83D\uDCCD", label: "You" },
 ];
+
+const NOTIFICATIONS: Record<number, string> = {
+  0: "\uD83C\uDF89 Rahul accepted your order!",
+  1: "\uD83D\uDCE6 Rahul is picking up your order",
+  2: "\uD83D\uDEB4 Rahul is on the way!",
+  3: "\uD83D\uDCCD Rahul is near you \u2014 get ready!",
+  4: "\u2705 Delivery complete!",
+};
+
+/* ------------------------------------------------------------------ */
+/*  MAIN COMPONENT                                                    */
+/* ------------------------------------------------------------------ */
 
 function Track() {
-  const [tileStyle, setTileStyle] = useState<TileStyle>("streets");
-  const [showTilePicker, setShowTilePicker] = useState(false);
+  const [isLive, setIsLive] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [currentStage, setCurrentStage] = useState(0);
+  const [etaMinutes, setEtaMinutes] = useState(4);
+  const [etaSeconds, setEtaSeconds] = useState(0);
+  const [campusLabel, setCampusLabel] = useState(CAMPUS_LABELS[0]);
   const [showOtp, setShowOtp] = useState(false);
   const [otpConfirmed, setOtpConfirmed] = useState(false);
   const [liveStage, setLiveStage] = useState("On way");
   const [liveEta, setLiveEta] = useState("4 min");
   const [liveProgress, setLiveProgress] = useState(55);
   const [courierName, setCourierName] = useState("Aarav");
-  const deliveryOtp = "4827";
+  const [deliveryOtp] = useState(() => Math.floor(1000 + Math.random() * 9000).toString());
   const mapInstanceRef = useRef<LeafletMap | null>(null);
   const runnerMarkerRef = useRef<unknown>(null);
+  const notifiedStages = useRef<Set<number>>(new Set());
 
   // Connect to Socket.IO for realtime delivery updates
   useEffect(() => {
@@ -86,155 +154,76 @@ function Track() {
     };
   }, []);
 
-  // Animate the runner marker along remaining route
+  // --- Realtime simulation engine ---
   useEffect(() => {
-    if (!runnerMarkerRef.current) return;
-    let animFrame: number;
-    let idx = 0;
-    const remaining = ROUTE_COORDS.slice(RUNNER_INDEX);
+    if (isLive) return;
+    const stageTimer = setInterval(() => {
+      setCurrentStage((prev) => {
+        if (prev >= STAGES.length - 1) return prev;
+        return prev + 1;
+      });
+    }, 6000);
+    return () => clearInterval(stageTimer);
+  }, [isLive]);
 
-    const step = () => {
-      if (!runnerMarkerRef.current) return;
-      const pos = remaining[idx % remaining.length];
-      // @ts-expect-error marker setLatLng
-      runnerMarkerRef.current.setLatLng(pos);
-      idx++;
-      if (idx < remaining.length) {
-        animFrame = window.setTimeout(step, 1200) as unknown as number;
-      }
-    };
-
-    const delay = setTimeout(step, 2000);
-    return () => {
-      clearTimeout(delay);
-      clearTimeout(animFrame);
-    };
-  }, []);
-
-  // Show OTP after runner reaches destination
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowOtp(true);
-    }, 8000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (isLive) return;
+    if (!notifiedStages.current.has(currentStage)) {
+      notifiedStages.current.add(currentStage);
+      const msg = NOTIFICATIONS[currentStage];
+      if (msg) toast(msg, { duration: 3000 });
+    }
+    const labelIndex = Math.min(
+      Math.floor((currentStage / (STAGES.length - 1)) * (CAMPUS_LABELS.length - 1)),
+      CAMPUS_LABELS.length - 1
+    );
+    setCampusLabel(CAMPUS_LABELS[labelIndex]);
+    if (currentStage >= STAGES.length - 1) setShowOtp(true);
+  }, [currentStage, isLive]);
 
-  const handleMapReady = useCallback(async (map: LeafletMap) => {
-    mapInstanceRef.current = map;
-    const L = await import("leaflet");
+  useEffect(() => {
+    if (isLive) return;
+    if (currentStage >= STAGES.length - 1) {
+      setEtaMinutes(0);
+      setEtaSeconds(0);
+      return;
+    }
+    const etaTimer = setInterval(() => {
+      setEtaSeconds((prevSec) => {
+        if (prevSec <= 0) {
+          setEtaMinutes((prevMin) => (prevMin <= 0 ? 0 : prevMin - 1));
+          return 59;
+        }
+        return prevSec - 1;
+      });
+    }, 1000);
+    return () => clearInterval(etaTimer);
+  }, [currentStage, isLive]);
 
-    // Fit map to show entire route with padding
-    const bounds = L.latLngBounds(ROUTE_COORDS);
-    map.fitBounds(bounds, { padding: [50, 50] });
+  useEffect(() => {
+    if (isLive || currentStage >= STAGES.length - 1) return;
+    const labelTimer = setInterval(() => {
+      setCampusLabel((prev) => {
+        const idx = CAMPUS_LABELS.indexOf(prev);
+        const maxIdx = Math.min(
+          Math.floor(((currentStage + 1) / (STAGES.length - 1)) * (CAMPUS_LABELS.length - 1)),
+          CAMPUS_LABELS.length - 1
+        );
+        const minIdx = Math.floor((currentStage / (STAGES.length - 1)) * (CAMPUS_LABELS.length - 1));
+        const nextIdx = idx >= maxIdx ? minIdx : idx + 1;
+        return CAMPUS_LABELS[nextIdx];
+      });
+    }, 4000);
+    return () => clearInterval(labelTimer);
+  }, [currentStage, isLive]);
 
-    // --- Completed route (solid) ---
-    L.polyline(ROUTE_COORDS.slice(0, RUNNER_INDEX + 1), {
-      color: "#1a1052",
-      weight: 5,
-      opacity: 0.9,
-      lineCap: "round",
-      lineJoin: "round",
-    }).addTo(map);
-
-    // --- Remaining route (dashed) ---
-    L.polyline(ROUTE_COORDS.slice(RUNNER_INDEX), {
-      color: "#1a1052",
-      weight: 4,
-      opacity: 0.4,
-      dashArray: "8, 12",
-      lineCap: "round",
-    }).addTo(map);
-
-    // --- Origin marker (canteen) ---
-    const originIcon = L.divIcon({
-      className: "",
-      html: `
-        <div style="
-          display:flex;align-items:center;justify-content:center;
-          width:40px;height:40px;border-radius:50%;
-          background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.25);
-          font-size:20px;
-        ">🏪</div>
-      `,
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-    });
-    L.marker(ORIGIN, { icon: originIcon })
-      .bindPopup(
-        '<div style="font-family:Inter,sans-serif;text-align:center">' +
-        '<b style="font-size:13px">Hostel Canteen</b><br>' +
-        '<span style="color:#666;font-size:11px">Pickup point</span></div>',
-      )
-      .addTo(map);
-
-    // --- Destination marker (you) ---
-    const destIcon = L.divIcon({
-      className: "",
-      html: `
-        <div style="
-          display:flex;align-items:center;justify-content:center;
-          width:44px;height:44px;border-radius:50%;
-          background:linear-gradient(135deg,#1a1052,#2d1b69);
-          box-shadow:0 4px 16px rgba(26,16,82,0.45);
-          font-size:22px;color:#fff;
-        ">🎯</div>
-      `,
-      iconSize: [44, 44],
-      iconAnchor: [22, 22],
-    });
-    L.marker(DESTINATION, { icon: destIcon })
-      .bindPopup(
-        '<div style="font-family:Inter,sans-serif;text-align:center">' +
-        '<b style="font-size:13px">Your Location</b><br>' +
-        '<span style="color:#666;font-size:11px">Drop-off point</span></div>',
-      )
-      .addTo(map);
-
-    // --- Runner marker (animated) ---
-    const runnerIcon = L.divIcon({
-      className: "",
-      html: `
-        <div style="position:relative;width:52px;height:52px">
-          <div style="
-            position:absolute;inset:0;border-radius:50%;
-            background:oklch(0.91 0.18 100);opacity:0.4;
-            animation:pulse-ring 1.8s cubic-bezier(0.2,0,0.4,1) infinite;
-          "></div>
-          <div style="
-            position:absolute;inset:6px;border-radius:50%;
-            background:linear-gradient(135deg,oklch(0.93 0.18 100),oklch(0.85 0.16 75));
-            box-shadow:0 4px 16px rgba(0,0,0,0.3);
-            display:flex;align-items:center;justify-content:center;
-            font-size:22px;border:3px solid #fff;
-          ">🚴</div>
-        </div>
-      `,
-      iconSize: [52, 52],
-      iconAnchor: [26, 26],
-    });
-    const runnerMarker = L.marker(RUNNER_POS, {
-      icon: runnerIcon,
-      zIndexOffset: 1000,
-    })
-      .bindPopup(
-        '<div style="font-family:Inter,sans-serif;text-align:center">' +
-        '<b style="font-size:13px">Aarav 🚴</b><br>' +
-        '<span style="color:#666;font-size:11px">320m away · ETA 4 min</span></div>',
-      )
-      .addTo(map);
-
-    runnerMarkerRef.current = runnerMarker;
-  }, []);
-
-  const tilePreviews: { style: TileStyle; label: string; emoji: string }[] = [
-    { style: "streets", label: "Streets", emoji: "🗺️" },
-    { style: "dark", label: "Dark", emoji: "🌙" },
-    { style: "satellite", label: "Satellite", emoji: "🛰️" },
-    { style: "watercolor", label: "Art", emoji: "🎨" },
-  ];
+  const routeProgress = Math.min((currentStage / (STAGES.length - 1)) * 100, 100);
+  const isDelivered = currentStage >= STAGES.length - 1;
+  const isMoving = currentStage === 2 || currentStage === 3;
 
   return (
     <MobileShell>
+<<<<<<< HEAD
       <TopBar title="On the way" subtitle={`ETA ${liveEta} · ${100 - liveProgress > 0 ? Math.round((100 - liveProgress) * 3.2) : 0}m away`} back={false} />
 
       {/* Real Leaflet map */}
@@ -253,55 +242,161 @@ function Track() {
           <button
             onClick={() => setShowTilePicker(!showTilePicker)}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-pop transition-transform hover:scale-105 active:scale-95"
+=======
+      <TopBar
+        title={isLive ? "Courier Mode" : "On the way"}
+        subtitle={
+          isLive
+            ? "You're live \u2014 accept deliveries"
+            : isDelivered
+              ? "Delivered! \uD83C\uDF89"
+              : `ETA ${etaMinutes}m ${etaSeconds.toString().padStart(2, "0")}s \u00B7 On campus`
+        }
+        back={false}
+        right={
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              setIsLive(!isLive);
+              toast(isLive ? "Courier mode OFF" : "\uD83D\uDFE2 You're now LIVE \u2014 accept deliveries!");
+            }}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold transition-all"
+            style={{
+              background: isLive ? "var(--color-success)" : "var(--color-secondary)",
+              color: isLive ? "var(--color-success-foreground)" : "var(--color-secondary-foreground)",
+            }}
+>>>>>>> 7a315c0 (Update logo, refined UI, chat and rating overlays)
           >
-            <Layers className="h-4 w-4" />
-          </button>
+            <motion.span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ background: isLive ? "#fff" : "var(--color-muted-foreground)" }}
+              animate={isLive ? { scale: [1, 1.4, 1], opacity: [1, 0.5, 1] } : {}}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+            <Radio className="h-3 w-3" />
+            {isLive ? "LIVE" : "Go Live"}
+          </motion.button>
+        }
+      />
 
-          {showTilePicker && (
-            <div className="absolute right-0 top-12 flex gap-1.5 rounded-2xl bg-card/95 p-2 shadow-pop backdrop-blur-sm">
-              {tilePreviews.map(({ style, label, emoji }) => (
-                <button
-                  key={style}
-                  onClick={() => {
-                    setTileStyle(style);
-                    setShowTilePicker(false);
-                  }}
-                  className={`flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-bold transition-all ${
-                    tileStyle === style
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-secondary"
-                  }`}
-                >
-                  <span className="text-base">{emoji}</span>
-                  {label}
-                </button>
-              ))}
+      <AnimatePresence mode="wait">
+        {isLive ? (
+          <motion.div key="courier" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
+            <CourierFlow />
+          </motion.div>
+        ) : (
+          <motion.div key="buyer" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30 }}>
+            {/* AVATAR TRACKING SECTION */}
+            <div className="relative overflow-hidden md:rounded-3xl" style={{ minHeight: 360 }}>
+              <div className="absolute inset-0" style={{ background: "var(--color-surface)" }} />
+              <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--color-foreground) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
+
+              <div className="relative z-10 flex flex-col gap-3 p-4">
+                {/* Courier Profile Card */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+                  className="flex items-center gap-3 rounded-2xl border border-border p-3 shadow-card" style={{ background: "var(--color-card)" }}>
+                  <CourierAvatar gender={courier.gender} size={52} isMoving={isMoving} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold truncate">{courier.name}</p>
+                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                        style={{ background: isDelivered ? "var(--color-success)" : "var(--color-brand)", color: isDelivered ? "var(--color-success-foreground)" : "var(--color-brand-foreground)" }}>
+                        <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: isDelivered ? "var(--color-success-foreground)" : "var(--color-brand-foreground)" }} />
+                        {isDelivered ? "Delivered" : STAGES[currentStage]?.label ?? ""}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className="flex items-center gap-0.5"><Star className="h-3 w-3 fill-warning text-warning" />{courier.rating}</span>
+                      <span>{"\u00B7"}</span><span>{courier.drops} drops</span><span>{"\u00B7"}</span><span>{courier.dept}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="flex items-center gap-1 rounded-xl px-2 py-1 text-[10px] font-bold" style={{ background: "var(--color-primary)", color: "var(--color-primary-foreground)" }}>
+                      <Sparkles className="h-3 w-3" />{courier.aiMatch}%
+                    </div>
+                    <span className="text-[9px] text-muted-foreground">AI Match</span>
+                  </div>
+                </motion.div>
+
+                {/* ETA Card */}
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
+                  className="flex items-center justify-between rounded-2xl border border-border p-3 shadow-card" style={{ background: "var(--color-card)" }}>
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full" style={{ background: "var(--color-accent)" }}>
+                      <Clock className="h-4 w-4" style={{ color: "var(--color-primary)" }} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Estimated Arrival</p>
+                      <motion.p key={`${etaMinutes}-${etaSeconds}`} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="text-lg font-bold">
+                        {isDelivered ? (<span style={{ color: "var(--color-success)" }}>Arrived! {"\uD83C\uDF89"}</span>) : (<>{etaMinutes}:{etaSeconds.toString().padStart(2, "0")}<span className="ml-1 text-xs font-semibold text-muted-foreground">min</span></>)}
+                      </motion.p>
+                    </div>
+                  </div>
+                  <AnimatePresence mode="wait">
+                    <motion.div key={campusLabel} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.3 }}
+                      className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5">
+                      <MapPin className="h-3 w-3" style={{ color: "var(--color-primary)" }} />
+                      <span className="text-[11px] font-semibold">{campusLabel}</span>
+                    </motion.div>
+                  </AnimatePresence>
+                </motion.div>
+
+
+                {/* Delivery Timeline */}
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
+                  className="rounded-2xl border border-border p-4 shadow-card" style={{ background: "var(--color-card)" }}>
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Delivery Timeline</p>
+                  <div className="space-y-0">
+                    {STAGES.map((stage, i) => {
+                      const isCompleted = i < currentStage;
+                      const isActive = i === currentStage;
+                      const isPending = i > currentStage;
+                      const Icon = stage.icon;
+                      return (
+                        <motion.div key={stage.label} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4, delay: i * 0.08 }} className="flex items-start gap-3">
+                          <div className="flex flex-col items-center">
+                            <motion.div className="flex h-7 w-7 items-center justify-center rounded-full border-2"
+                              style={{ background: isCompleted ? "var(--color-success)" : isActive ? "var(--color-brand)" : "var(--color-secondary)", borderColor: isCompleted ? "var(--color-success)" : isActive ? "var(--color-brand)" : "var(--color-border)", color: isCompleted || isActive ? (isCompleted ? "var(--color-success-foreground)" : "var(--color-brand-foreground)") : "var(--color-muted-foreground)" }}
+                              animate={isActive ? { scale: [1, 1.15, 1], boxShadow: ["0 0 0 0px var(--color-brand)", "0 0 0 6px transparent", "0 0 0 0px var(--color-brand)"] } : {}}
+                              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
+                              {isCompleted ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+                            </motion.div>
+                            {i < STAGES.length - 1 && <div className="w-0.5" style={{ height: 20, background: isCompleted ? "var(--color-success)" : "var(--color-border)" }} />}
+                          </div>
+                          <div className="pt-0.5 pb-3">
+                            <p className="text-xs font-semibold" style={{ color: isPending ? "var(--color-muted-foreground)" : "var(--color-foreground)" }}>{stage.label}</p>
+                            {isActive && <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-0.5 text-[10px] text-muted-foreground">{campusLabel}</motion.p>}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Re-center FAB */}
-        <button
-          onClick={() => {
-            if (mapInstanceRef.current) {
-              mapInstanceRef.current.flyTo(RUNNER_POS, 17, { duration: 1 });
-            }
-          }}
-          className="absolute left-3 top-3 z-[1000] flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-pop transition-transform hover:scale-105 active:scale-95"
-        >
-          <Navigation className="h-4 w-4" />
-        </button>
-      </div>
+            {/* BOTTOM SHEET */}
+            <div className="-mt-6 rounded-t-3xl border-t border-border bg-card px-4 pb-6 pt-5 shadow-pop">
+              <div className="mx-auto h-1 w-10 rounded-full bg-border" />
+              <div className="mt-4 flex items-center gap-2">
+                <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold text-brand-foreground">PICKED UP</span>
+                <span className="text-[11px] font-semibold text-muted-foreground">Order #CC-3487</span>
+              </div>
+              <h2 className="mt-2 text-xl font-bold">{courier.name.split(" ")[0]} is bringing your order</h2>
+              <p className="text-xs text-muted-foreground">Masala Maggi Cup {"\u00B7"} Cold Coffee {"\u00B7"} {"\u20B9"}95</p>
 
-      {/* Sheet */}
-      <div className="-mt-6 rounded-t-3xl border-t border-border bg-card px-4 pb-6 pt-5 shadow-pop">
-        <div className="mx-auto h-1 w-10 rounded-full bg-border" />
-        <div className="mt-4 flex items-center gap-2">
-          <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold text-brand-foreground">PICKED UP</span>
-          <span className="text-[11px] font-semibold text-muted-foreground">Order #CC-3487</span>
-        </div>
-        <h2 className="mt-2 text-xl font-bold">Aarav is bringing your order</h2>
-        <p className="text-xs text-muted-foreground">Masala Maggi Cup · Cold Coffee · ₹95</p>
+              {/* Runner card */}
+              <div className="mt-4 flex items-center gap-3 rounded-2xl border border-border p-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-2xl">{"\uD83E\uDDD1\u200D\uD83C\uDF93"}</div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">{courier.name.split(" ")[0]} {"\u00B7"} Runner</p>
+                  <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <Star className="h-3 w-3 fill-warning text-warning" /> {courier.rating} {"\u00B7"} {courier.drops} drops {"\u00B7"} {courier.dept}
+                  </p>
+                </div>
+                <button onClick={() => setShowChat(true)} className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary transition-colors hover:bg-secondary/80 active:scale-95"><MessageCircle className="h-4 w-4" /></button>
+                <button onClick={() => toast.info("Calling runner...")} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft transition-transform active:scale-95"><Phone className="h-4 w-4" /></button>
+              </div>
 
         {/* progress */}
         <div className="mt-4 flex items-center gap-2">
@@ -325,8 +420,8 @@ function Track() {
               <Star className="h-3 w-3 fill-warning text-warning" /> 4.9 · 124 drops · CSE 2nd yr
             </p>
           </div>
-          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary"><MessageCircle className="h-4 w-4" /></button>
-          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground"><Phone className="h-4 w-4" /></button>
+          <button onClick={() => setShowChat(true)} className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary transition-colors hover:bg-secondary/80 active:scale-95"><MessageCircle className="h-4 w-4" /></button>
+          <button onClick={() => toast.info("Calling runner...")} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft transition-transform active:scale-95"><Phone className="h-4 w-4" /></button>
         </div>
 
         {/* OTP Inline Verification */}
@@ -337,7 +432,7 @@ function Track() {
               <h3 className="text-sm font-bold text-primary">Delivery OTP</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              Share with Aarav to confirm delivery.
+              Share with {courierName} to confirm delivery.
             </p>
             <div className="flex items-center justify-center gap-2 rounded-xl bg-background py-3 mb-3 border border-border">
               {deliveryOtp.split("").map((d, i) => (
@@ -346,23 +441,9 @@ function Track() {
                 </span>
               ))}
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  navigator.clipboard?.writeText(deliveryOtp);
-                  toast.success("OTP copied to clipboard");
-                }}
-                className="flex items-center justify-center rounded-xl bg-secondary px-4 py-2.5 text-xs font-semibold transition-colors hover:bg-secondary/80"
-              >
-                <Copy className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => {
-                  setOtpConfirmed(true);
-                  toast.success("Delivery confirmed! 🎉 +10 campus points");
-                }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-success text-sm font-bold text-white shadow-soft transition-transform active:scale-[0.98]"
-              >
+            <div className="flex justify-center">
+              <button onClick={() => { setOtpConfirmed(true); toast.success("Delivery confirmed! \uD83C\uDF89 +10 campus points"); }}
+                className="flex items-center justify-center gap-2 rounded-xl bg-success px-10 py-3 text-sm font-bold text-white shadow-soft transition-transform active:scale-[0.98]">
                 <ShieldCheck className="h-4 w-4" /> Received
               </button>
             </div>
@@ -372,12 +453,28 @@ function Track() {
         <div className="mt-3 flex items-center justify-between rounded-2xl bg-accent p-3">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wide text-accent-foreground">After delivery</p>
-            <p className="text-xs text-accent-foreground">Rate Aarav & earn 10 campus points</p>
+            <p className="text-xs text-accent-foreground">Rate {courierName} & earn 10 campus points</p>
           </div>
-          <Link to="/" className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Rate now</Link>
+          <button onClick={() => setShowRating(true)} className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-soft transition-transform active:scale-95">Rate now</button>
         </div>
       </div>
+    </motion.div>
+  )}
+</AnimatePresence>
 
+      <ChatOverlay 
+        isOpen={showChat} 
+        onClose={() => setShowChat(false)} 
+        courierName={courier.name.split(" ")[0]}
+        courierGender={courier.gender}
+      />
+
+      <RatingOverlay 
+        isOpen={showRating} 
+        onClose={() => setShowRating(false)} 
+        courierName={courier.name.split(" ")[0]}
+        courierGender={courier.gender}
+      />
     </MobileShell>
   );
 }
