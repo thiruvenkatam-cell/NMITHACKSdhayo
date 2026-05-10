@@ -36,7 +36,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function Profile() {
-  const { isOnline, setOnline, setIncomingOrder } = useRunnerStore();
+  const { isOnline, setOnline, setIncomingOrder, isReceivingOrder } = useRunnerStore();
   const { user: authUser } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
@@ -61,6 +61,10 @@ function Profile() {
   ];
 
   const handleGoLive = () => {
+    if (!isOnline && isReceivingOrder) {
+      toast.error("You cannot go online while receiving an order!");
+      return;
+    }
     // Simply toggle online status. Real orders will come via socket.
     setOnline(!isOnline);
     if (!isOnline) {
@@ -108,7 +112,10 @@ function Profile() {
               <p className="text-sm font-bold">Runner mode</p>
               <p className="text-[11px] text-muted-foreground">Earn while heading to your next class</p>
             </div>
-            <button onClick={handleGoLive} className="rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground">
+            <button 
+              onClick={handleGoLive} 
+              className={`rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground transition-all ${!isOnline && isReceivingOrder ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
               {isOnline ? "Go offline" : "Go online"}
             </button>
           </div>

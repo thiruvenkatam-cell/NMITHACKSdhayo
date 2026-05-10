@@ -11,8 +11,8 @@ def get_smart_suggestion(order_type, pickup, drop, priority):
         
     genai.configure(api_key=Config.GEMINI_API_KEY)
     
-    # We use gemini-pro for text generation
-    model = genai.GenerativeModel('gemini-pro')
+    # We use gemini-1.5-flash for text generation
+    model = genai.GenerativeModel('gemini-1.5-flash')
     
     type_description = "A Canteen/Shop delivery relay" if order_type == 'canteen_delivery' else "A Peer-to-Peer emergency item lending"
     

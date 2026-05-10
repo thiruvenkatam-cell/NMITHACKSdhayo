@@ -217,46 +217,7 @@ function LendTrack() {
         </div>
       )}
 
-      {/* Timeline Section */}
-      <div className="px-5 py-6">
-        <h2 className="text-lg font-bold mb-6">Tracking Timeline</h2>
-        
-        <div className="relative pl-3 border-l-2 border-border/60 ml-2 space-y-6">
-          {TIMELINE_STEPS.map((step) => {
-            const isActive = step.id === activeStep;
-            const isPast = step.id < activeStep;
-            
-            return (
-              <div key={step.id} className="relative pl-6">
-                <div className="absolute -left-[18px] top-0.5 bg-background">
-                  {getStepIcon(step.id)}
-                </div>
-                
-                <div className={`${isActive ? "opacity-100" : isPast ? "opacity-70" : "opacity-40"}`}>
-                  <h3 className={`text-sm font-bold ${isActive ? "text-primary" : "text-foreground"}`}>
-                    {step.title}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">{step.desc}</p>
-                  
-                  {/* Additional UI for specific steps when active */}
-                  {isActive && step.id === 5 && (
-                    <div className="mt-3 p-3 bg-secondary rounded-xl flex items-center justify-between">
-                      <span className="text-xs font-semibold">Your OTP:</span>
-                      <span className="text-lg font-mono font-bold tracking-widest text-primary">8492</span>
-                    </div>
-                  )}
-                  {isActive && step.id === 2 && (
-                    <div className="mt-2 h-1.5 w-32 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-primary animate-pulse w-full rounded-full"></div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      
+
       {/* Advance Demo Button (for testing/hackathon purposes) */}
       <div className="p-4 bg-background border-t border-border mb-16 md:mb-0">
         <button 

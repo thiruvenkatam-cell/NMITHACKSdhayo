@@ -28,7 +28,16 @@ import { CourierFlow } from "@/components/courier/CourierFlow";
 import { ChatOverlay } from "@/components/ChatOverlay";
 import { RatingOverlay } from "@/components/RatingOverlay";
 
+type TrackSearch = {
+  orderId?: string;
+};
+
 export const Route = createFileRoute("/track")({
+  validateSearch: (search: Record<string, unknown>): TrackSearch => {
+    return {
+      orderId: search.orderId as string | undefined,
+    };
+  },
   head: () => ({
     meta: [
       { title: "Track delivery \u2014 live ETA" },
@@ -46,23 +55,7 @@ export const Route = createFileRoute("/track")({
 /*  DATA                                                              */
 /* ------------------------------------------------------------------ */
 
-interface CourierData {
-  name: string;
-  gender: "male" | "female";
-  rating: number;
-  drops: number;
-  dept: string;
-  aiMatch: number;
-}
 
-const courier: CourierData = {
-  name: "Rahul K.",
-  gender: "male",
-  rating: 4.9,
-  drops: 124,
-  dept: "CSE 2nd yr",
-  aiMatch: 94,
-};
 
 const STAGES = [
   { label: "Accepted", icon: CheckCircle2, emoji: "\u2705" },
@@ -103,7 +96,9 @@ const NOTIFICATIONS: Record<number, string> = {
 /* ------------------------------------------------------------------ */
 
 function Track() {
-  const { isOnline: isLive, setOnline: setIsLive } = useRunnerStore();
+  const search = Route.useSearch();
+  const orderId = search.orderId;
+  const { isOnline: isLive, setOnline: setIsLive, isReceivingOrder, setReceivingOrder } = useRunnerStore();
   const [showChat, setShowChat] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [currentStage, setCurrentStage] = useState(0);
@@ -154,7 +149,7 @@ function Track() {
 
   // --- Realtime simulation engine ---
   useEffect(() => {
-    if (isLive) return;
+    if (isLive || !orderId) return;
     const stageTimer = setInterval(() => {
       setCurrentStage((prev) => {
         if (prev >= STAGES.length - 1) return prev;
@@ -162,7 +157,7 @@ function Track() {
       });
     }, 6000);
     return () => clearInterval(stageTimer);
-  }, [isLive]);
+  }, [isLive, orderId]);
 
   useEffect(() => {
     if (isLive) return;
@@ -219,6 +214,10 @@ function Track() {
   const isDelivered = currentStage >= STAGES.length - 1;
   const isMoving = currentStage === 2 || currentStage === 3;
 
+  useEffect(() => {
+    setReceivingOrder(!isDelivered && !isLive);
+  }, [isDelivered, isLive, setReceivingOrder]);
+
   return (
     <MobileShell>
       <TopBar
@@ -235,10 +234,14 @@ function Track() {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => {
+              if (!isLive && isReceivingOrder) {
+                toast.error("You cannot go online while receiving an order!");
+                return;
+              }
               setIsLive(!isLive);
               toast(isLive ? "Courier mode OFF" : "\uD83D\uDFE2 You're now LIVE \u2014 accept deliveries!");
             }}
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold transition-all"
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold transition-all ${!isLive && isReceivingOrder ? "opacity-50 cursor-not-allowed" : ""}`}
             style={{
               background: isLive ? "var(--color-success)" : "var(--color-secondary)",
               color: isLive ? "var(--color-success-foreground)" : "var(--color-secondary-foreground)",
@@ -261,6 +264,19 @@ function Track() {
           <motion.div key="courier" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
             <CourierFlow />
           </motion.div>
+        ) : !orderId ? (
+          <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center pt-32 px-6 text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-secondary text-4xl mb-6">
+              📦
+            </div>
+            <h2 className="text-xl font-bold mb-2">No active orders</h2>
+            <p className="text-sm text-muted-foreground mb-8">
+              You aren't tracking any deliveries right now. Head over to the store to place an order!
+            </p>
+            <Link to="/store" className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-pop transition-transform active:scale-95">
+              Browse Store
+            </Link>
+          </motion.div>
         ) : (
           <motion.div key="buyer" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30 }}>
             {/* AVATAR TRACKING SECTION */}
@@ -272,24 +288,23 @@ function Track() {
                 {/* Courier Profile Card */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
                   className="flex items-center gap-3 rounded-2xl border border-border p-3 shadow-card" style={{ background: "var(--color-card)" }}>
-                  <CourierAvatar gender={courier.gender} size={52} isMoving={isMoving} />
+                  <CourierAvatar gender={"male"} size={52} isMoving={isMoving} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold truncate">{courier.name}</p>
+                      <p className="text-sm font-bold truncate">{courierName}</p>
                       <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
                         style={{ background: isDelivered ? "var(--color-success)" : "var(--color-brand)", color: isDelivered ? "var(--color-success-foreground)" : "var(--color-brand-foreground)" }}>
                         <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: isDelivered ? "var(--color-success-foreground)" : "var(--color-brand-foreground)" }} />
-                        {isDelivered ? "Delivered" : STAGES[currentStage]?.label ?? ""}
+                        {isDelivered ? "Delivered" : liveStage}
                       </span>
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span className="flex items-center gap-0.5"><Star className="h-3 w-3 fill-warning text-warning" />{courier.rating}</span>
-                      <span>{"\u00B7"}</span><span>{courier.drops} drops</span><span>{"\u00B7"}</span><span>{courier.dept}</span>
+                      <span>Student Runner</span>
                     </div>
                   </div>
                   <div className="flex flex-col items-center gap-0.5">
                     <div className="flex items-center gap-1 rounded-xl px-2 py-1 text-[10px] font-bold" style={{ background: "var(--color-primary)", color: "var(--color-primary-foreground)" }}>
-                      <Sparkles className="h-3 w-3" />{courier.aiMatch}%
+                      <Sparkles className="h-3 w-3" />Matched
                     </div>
                     <span className="text-[9px] text-muted-foreground">AI Match</span>
                   </div>
@@ -355,20 +370,14 @@ function Track() {
             {/* BOTTOM SHEET */}
             <div className="-mt-6 rounded-t-3xl border-t border-border bg-card px-4 pb-6 pt-5 shadow-pop">
               <div className="mx-auto h-1 w-10 rounded-full bg-border" />
-              <div className="mt-4 flex items-center gap-2">
-                <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold text-brand-foreground">PICKED UP</span>
-                <span className="text-[11px] font-semibold text-muted-foreground">Order #CC-3487</span>
-              </div>
-              <h2 className="mt-2 text-xl font-bold">{courier.name.split(" ")[0]} is bringing your order</h2>
-              <p className="text-xs text-muted-foreground">Masala Maggi Cup {"\u00B7"} Cold Coffee {"\u00B7"} {"\u20B9"}95</p>
 
               {/* Runner card */}
               <div className="mt-4 flex items-center gap-3 rounded-2xl border border-border p-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-2xl">{"\uD83E\uDDD1\u200D\uD83C\uDF93"}</div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold">{courier.name.split(" ")[0]} {"\u00B7"} Runner</p>
+                  <p className="text-sm font-semibold">{courierName} {"\u00B7"} Runner</p>
                   <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Star className="h-3 w-3 fill-warning text-warning" /> {courier.rating} {"\u00B7"} {courier.drops} drops {"\u00B7"} {courier.dept}
+                    Student Delivery Partner
                   </p>
                 </div>
                 <button onClick={() => setShowChat(true)} className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary transition-colors hover:bg-secondary/80 active:scale-95"><MessageCircle className="h-4 w-4" /></button>
@@ -417,15 +426,15 @@ function Track() {
       <ChatOverlay 
         isOpen={showChat} 
         onClose={() => setShowChat(false)} 
-        courierName={courier.name.split(" ")[0]}
-        courierGender={courier.gender}
+        courierName={courierName.split(" ")[0]}
+        courierGender={"male"}
       />
 
       <RatingOverlay 
         isOpen={showRating} 
         onClose={() => setShowRating(false)} 
-        courierName={courier.name.split(" ")[0]}
-        courierGender={courier.gender}
+        courierName={courierName.split(" ")[0]}
+        courierGender={"male"}
       />
     </MobileShell>
   );

@@ -24,6 +24,7 @@ let isOnline = false;
 let incomingOrder: IncomingOrder | null = null;
 let currentUser: any = null;
 let authLoading: boolean = true;
+let isReceivingOrder: boolean = false;
 
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((l) => l());
@@ -66,6 +67,10 @@ export const runnerActions = {
   },
   setIncomingOrder: (order: IncomingOrder | null) => {
     incomingOrder = order;
+    notify();
+  },
+  setReceivingOrder: (status: boolean) => {
+    isReceivingOrder = status;
     notify();
   },
 };
@@ -115,11 +120,13 @@ export function useCartStore() {
 export function useRunnerStore() {
   const [online, setOnlineState] = useState(isOnline);
   const [order, setOrderState] = useState(incomingOrder);
+  const [receiving, setReceivingState] = useState(isReceivingOrder);
 
   useEffect(() => {
     const update = () => {
       setOnlineState(isOnline);
       setOrderState(incomingOrder);
+      setReceivingState(isReceivingOrder);
     };
     listeners.add(update);
     return () => { listeners.delete(update); };
@@ -128,6 +135,7 @@ export function useRunnerStore() {
   return {
     isOnline: online,
     incomingOrder: order,
+    isReceivingOrder: receiving,
     ...runnerActions,
   };
 }
