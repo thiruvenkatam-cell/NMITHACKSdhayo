@@ -3,8 +3,7 @@ flask-cors
 Flask-PyMongo
 pymongo
 Flask-SocketIO
-google-generativeai
-google-auth
+requests
 python-dotenv
 PyJWT
 email-validator
@@ -12,5 +11,5 @@ pydantic
 setuptools
 werkzeug
 gunicorn
-eventlet
-greenlet
+gevent
+gevent-websocket
