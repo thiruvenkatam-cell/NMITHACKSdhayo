@@ -17,7 +17,8 @@ def create_app():
     CORS(app, resources={r"/*": {"origins": "*"}})
     
     # Initialize plugins
-    mongo.init_app(app)
+    import certifi
+    mongo.init_app(app, tlsCAFile=certifi.where())
     socketio.init_app(app, cors_allowed_origins="*", async_mode='gevent')
     
     with app.app_context():
