@@ -1,3 +1,4 @@
+import certifi
 from gevent import monkey
 monkey.patch_all()
 
@@ -17,7 +18,6 @@ def create_app():
     CORS(app, resources={r"/*": {"origins": "*"}})
     
     # Initialize plugins
-    import certifi
     mongo.init_app(app, tlsCAFile=certifi.where())
     socketio.init_app(app, cors_allowed_origins="*", async_mode='gevent')
     

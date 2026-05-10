@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from extensions import mongo
 import uuid
 import datetime
+import requests
+from config import Config
 from utils.auth import token_required
 
 merchant_products_bp = Blueprint('merchant_products_bp', __name__)
@@ -12,9 +14,6 @@ def generate_emoji():
     name = data.get('name', '')
     if not name:
         return jsonify({"emoji": "📦"})
-    
-    import requests
-    from config import Config
     
     try:
         response = requests.post(
