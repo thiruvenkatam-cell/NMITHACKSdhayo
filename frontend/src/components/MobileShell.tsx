@@ -18,8 +18,8 @@ export function MobileShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (to: string) => (to === "/" ? path === "/" : path.startsWith(to));
 
-  // Hide global floating cart on detail and lend-related pages so fixed bottom actions stay clickable
-  const hideFloatingCart = path === "/cart" || path.startsWith("/product") || path.startsWith("/lend");
+  // Hide global floating cart on dashboard, detail, and lend-related pages
+  const hideFloatingCart = path === "/" || path === "/cart" || path.startsWith("/product") || path.startsWith("/lend");
   const hideMobileNav = path === "/cart" || path.startsWith("/product") || path.startsWith("/lend");
 
   return (
