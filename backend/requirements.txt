@@ -4,6 +4,7 @@ Flask-PyMongo
 pymongo
 Flask-SocketIO
 requests
+google-auth
 python-dotenv
 PyJWT
 email-validator
