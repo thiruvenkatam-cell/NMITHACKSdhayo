@@ -19,7 +19,7 @@ export function MobileShell({ children }: { children: ReactNode }) {
   const isActive = (to: string) => (to === "/" ? path === "/" : path.startsWith(to));
 
   // Hide global floating cart on dashboard, detail, and lend-related pages
-  const hideFloatingCart = path === "/" || path === "/cart" || path.startsWith("/product") || path.startsWith("/lend");
+  const hideFloatingCart = path === "/" || path === "/dashboard" || path.startsWith("/merchant") || path === "/cart" || path.startsWith("/product") || path.startsWith("/lend");
   const hideMobileNav = path === "/cart" || path.startsWith("/product") || path.startsWith("/lend");
 
   return (

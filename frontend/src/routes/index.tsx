@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useCartStore, useRunnerStore } from "@/lib/store";
-import { MapPin, ChevronDown, Search, Bell, Zap, BookOpen, Coffee, Star, ArrowRight, Plus } from "lucide-react";
+import { MapPin, ChevronDown, Search, Bell, Zap, BookOpen, Coffee, Star, ArrowRight, Plus, X, Navigation } from "lucide-react";
 import { MobileShell } from "@/components/MobileShell";
 import { GoLiveSlider } from "@/components/GoLiveSlider";
 import { categories, products, lendItems } from "@/lib/data";
@@ -24,6 +24,8 @@ function Index() {
   const { isOnline, setOnline, setIncomingOrder } = useRunnerStore();
   const [location, setLocation] = useState("Block A · Room 214");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showLocationPopup, setShowLocationPopup] = useState(false);
+  const [customAddress, setCustomAddress] = useState("");
   const nav = useNavigate();
 
   const handleGetLocation = () => {
@@ -73,7 +75,7 @@ function Index() {
       {/* Hero / location */}
       <div className="bg-gradient-hero px-4 pb-6 pt-4 md:rounded-3xl md:px-8 md:pb-10 md:pt-8">
         <div className="flex items-center justify-between">
-          <button onClick={handleGetLocation} className="flex items-center gap-1 text-left transition-transform active:scale-95">
+          <button onClick={() => setShowLocationPopup(true)} className="flex items-center gap-1 text-left transition-transform active:scale-95">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground/10">
               <MapPin className="h-4 w-4" strokeWidth={2.4} />
             </span>
@@ -348,6 +350,113 @@ function Index() {
           <BookOpen className="h-3.5 w-3.5" />
         </div>
       </section>
+
+      {/* Location Change Popup */}
+      {showLocationPopup && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center" onClick={() => setShowLocationPopup(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-[480px] rounded-t-3xl bg-card px-5 pb-8 pt-5 shadow-pop md:rounded-3xl animate-in slide-in-from-bottom-4 fade-in duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-base font-bold">Deliver to</h3>
+              <button onClick={() => setShowLocationPopup(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary transition-colors hover:bg-secondary/80">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mx-auto h-1 w-10 rounded-full bg-border mb-4 md:hidden" />
+
+            {/* GPS option */}
+            <button
+              onClick={() => {
+                toast.info("Fetching GPS location...");
+                if ("geolocation" in navigator) {
+                  navigator.geolocation.getCurrentPosition(
+                    () => {
+                      setTimeout(() => {
+                        setLocation("Campus Main Gate");
+                        setShowLocationPopup(false);
+                        toast.success("Location updated via GPS");
+                      }, 800);
+                    },
+                    () => toast.error("GPS permission denied.")
+                  );
+                }
+              }}
+              className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-3 mb-3 text-left transition-all active:scale-[0.98]"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <Navigation className="h-4 w-4" />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-primary">Use GPS location</span>
+                <p className="text-[10px] text-muted-foreground">Auto-detect your current location</p>
+              </div>
+            </button>
+
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">Saved Locations</p>
+            <div className="space-y-2 mb-4">
+              {["Block A · Room 214", "Room 402, Hostel B", "Library Gate", "Campus Main Gate", "Cafeteria Entrance"].map((addr) => (
+                <button
+                  key={addr}
+                  onClick={() => {
+                    setLocation(addr);
+                    setShowLocationPopup(false);
+                    toast.success("Location updated!");
+                  }}
+                  className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all active:scale-[0.98] ${
+                    location === addr
+                      ? "border-primary bg-primary/5 shadow-soft"
+                      : "border-border bg-background hover:bg-secondary/50"
+                  }`}
+                >
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-full ${
+                    location === addr ? "bg-primary text-primary-foreground" : "bg-secondary"
+                  }`}>
+                    <MapPin className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-semibold flex-1">{addr}</span>
+                  {location === addr && (
+                    <span className="text-[10px] font-bold text-primary uppercase">Current</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Type a custom location..."
+                value={customAddress}
+                onChange={(e) => setCustomAddress(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && customAddress.trim()) {
+                    setLocation(customAddress.trim());
+                    setCustomAddress("");
+                    setShowLocationPopup(false);
+                    toast.success("Location updated!");
+                  }
+                }}
+                className="w-full rounded-2xl border border-border bg-background px-4 py-3 pr-12 text-sm outline-none focus:border-primary/50"
+              />
+              <button
+                onClick={() => {
+                  if (customAddress.trim()) {
+                    setLocation(customAddress.trim());
+                    setCustomAddress("");
+                    setShowLocationPopup(false);
+                    toast.success("Location updated!");
+                  }
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-transform active:scale-90"
+              >
+                <Navigation className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MobileShell>
   );
 }
