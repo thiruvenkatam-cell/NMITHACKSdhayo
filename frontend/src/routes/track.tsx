@@ -18,17 +18,14 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-<<<<<<< HEAD
 import MapContainer, { type TileStyle } from "@/components/MapContainer";
 import type { Map as LeafletMap } from "leaflet";
 import { socketService } from "@/lib/socket";
-=======
 import { motion, AnimatePresence } from "framer-motion";
 import { CourierAvatar } from "@/components/courier/CourierAvatar";
 import { CourierFlow } from "@/components/courier/CourierFlow";
 import { ChatOverlay } from "@/components/ChatOverlay";
 import { RatingOverlay } from "@/components/RatingOverlay";
->>>>>>> 7a315c0 (Update logo, refined UI, chat and rating overlays)
 
 export const Route = createFileRoute("/track")({
   head: () => ({
