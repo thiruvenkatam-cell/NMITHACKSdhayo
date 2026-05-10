@@ -13,8 +13,23 @@ def generate_emoji():
     if not name:
         return jsonify({"emoji": "📦"})
     
-    from services.gemini_service import generate_product_emoji
-    emoji = generate_product_emoji(name)
+    import requests
+    from config import Config
+    
+    try:
+        response = requests.post(
+            f"{Config.AI_SERVICE_URL}/generate-emoji", 
+            json={"name": name},
+            timeout=5
+        )
+        if response.status_code == 200:
+            emoji = response.json().get("emoji", "📦")
+        else:
+            emoji = "📦"
+    except Exception as e:
+        print(f"Error calling AI service: {e}")
+        emoji = "📦"
+        
     return jsonify({"emoji": emoji})
 
 @merchant_products_bp.route('/merchant/add-product', methods=['POST'])

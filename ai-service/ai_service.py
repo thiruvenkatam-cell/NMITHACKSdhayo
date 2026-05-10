@@ -1,15 +1,20 @@
 import google.generativeai as genai
-from config import Config
+import os
 import json
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 def get_smart_suggestion(order_type, pickup, drop, priority):
     """
     Uses Gemini API to provide an intelligent summary of the delivery and route reasoning.
     """
-    if not Config.GEMINI_API_KEY:
+    if not GEMINI_API_KEY:
         raise Exception("GEMINI_API_KEY is not configured in environment.")
         
-    genai.configure(api_key=Config.GEMINI_API_KEY)
+    genai.configure(api_key=GEMINI_API_KEY)
     
     # We use gemini-1.5-flash for text generation
     model = genai.GenerativeModel('gemini-1.5-flash')
@@ -51,11 +56,11 @@ def generate_product_emoji(product_name: str) -> str:
     """
     Uses Gemini API to generate a single relevant emoji for a given product name.
     """
-    if not Config.GEMINI_API_KEY:
+    if not GEMINI_API_KEY:
         return "📦"
         
     try:
-        genai.configure(api_key=Config.GEMINI_API_KEY)
+        genai.configure(api_key=GEMINI_API_KEY)
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompt = f"""

@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from services.gemini_service import get_smart_suggestion
+import requests
+from config import Config
 from services.matching import calculate_match
 
 ai_bp = Blueprint('ai_bp', __name__)
@@ -16,20 +17,25 @@ def match_route():
 @ai_bp.route('/ai-suggestion', methods=['POST'])
 def ai_suggestion():
     data = request.json
+    
+    fallback_suggestion = {
+        "suggestion": {
+            "recommendation": "Alex Student (Campus Hero)",
+            "fastest_route": "Via Main Quad to the Library",
+            "reasoning": f"Alex is currently passing by {data.get('pickup', 'your location')} and has a 98% route overlap. AI confidence: 96%."
+        }
+    }
+    
     try:
-        suggestion = get_smart_suggestion(
-            order_type=data.get('order_type', 'canteen_delivery'),
-            pickup=data.get('pickup', 'Unknown'),
-            drop=data.get('drop', 'Unknown'),
-            priority=data.get('priority', 'normal')
+        response = requests.post(
+            f"{Config.AI_SERVICE_URL}/smart-suggestion",
+            json=data,
+            timeout=8
         )
-        return jsonify({"suggestion": suggestion})
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify(fallback_suggestion)
     except Exception as e:
-        # Fallback to demo data if API key is missing or invalid
-        return jsonify({
-            "suggestion": {
-                "recommendation": "Alex Student (Campus Hero)",
-                "fastest_route": "Via Main Quad to the Library",
-                "reasoning": f"Alex is currently passing by {data.get('pickup', 'your location')} and has a 98% route overlap. AI confidence: 96%."
-            }
-        })
+        print(f"Error calling AI service: {e}")
+        return jsonify(fallback_suggestion)
