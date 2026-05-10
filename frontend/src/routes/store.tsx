@@ -30,7 +30,7 @@ function Store() {
     const fetchStore = async () => {
       try {
         const res = await api.get("/merchant/products");
-        if (res.data.products) {
+        if (res.data.products && res.data.products.length > 0) {
           const mapped = res.data.products.map((p: any) => ({
             id: p.product_id,
             name: p.name,
@@ -43,6 +43,8 @@ function Store() {
             eta: "5 min"
           }));
           setDbProducts(mapped);
+        } else {
+          setDbProducts(products);
         }
       } catch (err) {
         // Fallback to static if backend fails
