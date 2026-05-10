@@ -25,7 +25,7 @@ export function MobileShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background md:flex">
       {/* Desktop sidebar */}
-      <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-[240px] md:shrink-0 md:flex-col md:border-r md:border-black md:bg-card md:px-4 md:py-6 lg:w-[280px]">
+      <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:flex md:h-screen md:w-[240px] md:shrink-0 md:flex-col md:border-r md:border-black md:bg-card md:px-4 md:py-6 lg:w-[280px]">
         <Link to="/" className="flex items-center gap-2 px-2 py-1">
           <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand text-brand-foreground">
             <CustomLogo className="h-6 w-6" />
@@ -64,7 +64,7 @@ export function MobileShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main content area */}
-      <div className="flex-1 md:min-w-0">
+      <div className="flex-1 md:min-w-0 md:pl-[240px] lg:pl-[280px]">
         <div className="mx-auto w-full max-w-[480px] pb-28 md:max-w-[1240px] md:px-8 md:pb-12 md:pt-3 sm:max-w-[640px] animate-in fade-in slide-in-from-bottom-4 duration-300" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
           {children}
         </div>

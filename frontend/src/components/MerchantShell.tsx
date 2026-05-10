@@ -27,7 +27,7 @@ export function MerchantShell({ children }: { children: ReactNode }) {
       } as React.CSSProperties}
     >
       {/* Desktop sidebar */}
-      <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-[240px] md:shrink-0 md:flex-col md:border-r md:border-border md:bg-card md:px-4 md:py-6 lg:w-[260px]">
+      <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:flex md:h-screen md:w-[240px] md:shrink-0 md:flex-col md:border-r md:border-border md:bg-card md:px-4 md:py-6 lg:w-[260px]">
         <Link to="/merchant" className="flex items-center gap-2 px-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white">
             <CustomLogo className="h-5 w-5" />
@@ -62,7 +62,7 @@ export function MerchantShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 md:min-w-0">
+      <div className="flex-1 md:min-w-0 md:pl-[240px] lg:pl-[260px]">
         <div className="mx-auto w-full max-w-[480px] pb-28 sm:max-w-[640px] md:max-w-[1240px] md:px-8 md:pb-12 md:pt-2 animate-in fade-in slide-in-from-bottom-4 duration-300" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
           {children}
         </div>
