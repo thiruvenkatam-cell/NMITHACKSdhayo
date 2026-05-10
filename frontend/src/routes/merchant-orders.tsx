@@ -52,7 +52,7 @@ function MerchantOrders() {
           eta: o.eta || "5 min"
         }));
         setOrders(mapped);
-        
+
         // Update the global store pending count live
         const pendingCount = mapped.filter((o: any) => o.status === "new").length;
         setPending(pendingCount);
@@ -65,15 +65,25 @@ function MerchantOrders() {
   useEffect(() => {
     fetchOrders();
     const socket = socketService.connect();
-    
+
     const handleNewOrder = () => {
       fetchOrders();
     };
-    
+
     socket?.on("new_order", handleNewOrder);
-    
+
+    // Listen for runners accepting orders (Local network sync)
+    const bc = new BroadcastChannel("unidrop-orders");
+    bc.onmessage = (event) => {
+      if (event.data.type === "ORDER_ACCEPTED") {
+        setOrders(prev => prev.map(o => o.id === event.data.orderId ? { ...o, status: "assigned", runner: event.data.runner } : o));
+        toast.success(`Courier ${event.data.runner} assigned to order ${event.data.orderId}!`);
+      }
+    };
+
     return () => {
       socket?.off("new_order", handleNewOrder);
+      bc.close();
     };
   }, []);
 
@@ -89,7 +99,7 @@ function MerchantOrders() {
   const updateStatus = async (id: string, status: Order["status"]) => {
     // Optimistic UI update
     setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
-    
+
     try {
       const backendStatus = status === "new" ? "pending" : status;
       await api.post("/merchant/update-order-status", { order_id: id, status: backendStatus });
@@ -103,6 +113,11 @@ function MerchantOrders() {
     setExpandedBills((prev) => new Set(prev).add(order.id));
     incrementAccepted();
     toast.success("Order accepted!");
+
+    // Broadcast to runners automatically
+    const bc = new BroadcastChannel("unidrop-orders");
+    bc.postMessage({ type: "NEW_ORDER", order });
+    bc.close();
   };
 
   const rejectOrder = async (id: string) => {
@@ -160,9 +175,8 @@ function MerchantOrders() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold capitalize transition-all ${
-                filter === f ? "bg-gradient-to-r from-red-500 to-rose-600 text-white" : "bg-secondary text-muted-foreground"
-              }`}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold capitalize transition-all ${filter === f ? "bg-gradient-to-r from-red-500 to-rose-600 text-white" : "bg-secondary text-muted-foreground"
+                }`}
             >
               {f} {f !== "all" && <span className="opacity-60">({orders.filter((o) => o.status === f).length})</span>}
             </button>
@@ -178,9 +192,8 @@ function MerchantOrders() {
             return (
               <div
                 key={o.id + i}
-                className={`rounded-2xl border bg-card overflow-hidden transition-all ${
-                  o.status === "new" ? "border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.08)]" : "border-border"
-                }`}
+                className={`rounded-2xl border bg-card overflow-hidden transition-all ${o.status === "new" ? "border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.08)]" : "border-border"
+                  }`}
                 style={{ animation: o.time === "Just now" ? "fade-up 0.4s ease-out" : undefined }}
               >
                 {/* Order Card */}

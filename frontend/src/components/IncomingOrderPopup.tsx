@@ -49,6 +49,12 @@ export function IncomingOrderPopup() {
     if (dragX > getMaxX() * 0.75) {
       setAccepted(true);
       toast.success("Order accepted! Routing to pickup...");
+      
+      // Notify merchant
+      const bc = new BroadcastChannel("unidrop-orders");
+      bc.postMessage({ type: "ORDER_ACCEPTED", orderId: incomingOrder.id, runner: "Runner (You)" });
+      bc.close();
+
       setTimeout(() => {
         setIncomingOrder(null);
         setAccepted(false);

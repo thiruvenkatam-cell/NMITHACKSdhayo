@@ -22,6 +22,28 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { addToCart } = useCartStore();
   const { isOnline, setOnline, setIncomingOrder } = useRunnerStore();
+  
+  useEffect(() => {
+    if (!isOnline) return;
+    const bc = new BroadcastChannel("unidrop-orders");
+    bc.onmessage = (event) => {
+      if (event.data.type === "NEW_ORDER") {
+        const order = event.data.order;
+        setIncomingOrder({
+          id: order.id,
+          items: order.items.split(","),
+          earnings: Math.max(10, Math.round(order.total * 0.1)),
+          exp: 50,
+          pickupLocation: "Merchant",
+          pickupDistance: "200m",
+          dropoffLocation: order.to || "Student Block",
+          dropoffDistance: "500m",
+          eta: "9 min"
+        });
+      }
+    };
+    return () => bc.close();
+  }, [isOnline, setIncomingOrder]);
   const [location, setLocation] = useState("Block A · Room 214");
   const [searchQuery, setSearchQuery] = useState("");
   const [showLocationPopup, setShowLocationPopup] = useState(false);
@@ -50,21 +72,7 @@ function Index() {
   const handleGoLive = (status: boolean) => {
     setOnline(status);
     if (status) {
-      toast.success("You are now online! 🟢");
-      // Simulate incoming order after 3 seconds
-      setTimeout(() => {
-        setIncomingOrder({
-          id: "ord-123",
-          items: ["Masala Maggi Cup", "Cold Coffee"],
-          earnings: 35,
-          exp: 50,
-          pickupLocation: "Hostel Canteen",
-          pickupDistance: "200m",
-          dropoffLocation: "Room 402, Block B",
-          dropoffDistance: "500m",
-          eta: "9 min"
-        });
-      }, 3000);
+      toast.success("You are now online! 🟢 Waiting for orders...");
     } else {
       setIncomingOrder(null);
     }
