@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MobileShell } from "@/components/MobileShell";
 import { TopBar } from "@/components/TopBar";
+import { useRunnerStore } from "@/lib/store";
 import {
   Phone,
   MessageCircle,
@@ -102,7 +103,7 @@ const NOTIFICATIONS: Record<number, string> = {
 /* ------------------------------------------------------------------ */
 
 function Track() {
-  const [isLive, setIsLive] = useState(false);
+  const { isOnline: isLive, setOnline: setIsLive } = useRunnerStore();
   const [showChat, setShowChat] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [currentStage, setCurrentStage] = useState(0);
