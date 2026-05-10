@@ -375,31 +375,6 @@ function Track() {
                 <button onClick={() => toast.info("Calling runner...")} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft transition-transform active:scale-95"><Phone className="h-4 w-4" /></button>
               </div>
 
-        {/* progress */}
-        <div className="mt-4 flex items-center gap-2">
-          {["Placed", "Picked", "On way", "Delivered"].map((s, i) => (
-            <div key={s} className="flex flex-1 flex-col items-center gap-1">
-              <div
-                className="h-1.5 w-full rounded-full"
-                style={{ background: (liveProgress >= (i + 1) * 25) ? "var(--color-primary)" : "var(--color-border)" }}
-              />
-              <span className="text-[10px] font-semibold" style={{ color: (liveProgress >= (i + 1) * 25) ? "var(--color-foreground)" : "var(--color-muted-foreground)" }}>{s}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Runner card */}
-        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-border p-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-2xl">🧑‍🎓</div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold">{courierName} · Runner</p>
-            <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <Star className="h-3 w-3 fill-warning text-warning" /> 4.9 · 124 drops · CSE 2nd yr
-            </p>
-          </div>
-          <button onClick={() => setShowChat(true)} className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary transition-colors hover:bg-secondary/80 active:scale-95"><MessageCircle className="h-4 w-4" /></button>
-          <button onClick={() => toast.info("Calling runner...")} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft transition-transform active:scale-95"><Phone className="h-4 w-4" /></button>
-        </div>
 
         {/* OTP Inline Verification */}
         {showOtp && !otpConfirmed && (
