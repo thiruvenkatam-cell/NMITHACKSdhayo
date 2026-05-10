@@ -22,28 +22,6 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { addToCart } = useCartStore();
   const { isOnline, setOnline, setIncomingOrder } = useRunnerStore();
-  
-  useEffect(() => {
-    if (!isOnline) return;
-    const bc = new BroadcastChannel("unidrop-orders");
-    bc.onmessage = (event) => {
-      if (event.data.type === "NEW_ORDER") {
-        const order = event.data.order;
-        setIncomingOrder({
-          id: order.id,
-          items: order.items.split(","),
-          earnings: Math.max(10, Math.round(order.total * 0.1)),
-          exp: 50,
-          pickupLocation: "Merchant",
-          pickupDistance: "200m",
-          dropoffLocation: order.to || "Student Block",
-          dropoffDistance: "500m",
-          eta: "9 min"
-        });
-      }
-    };
-    return () => bc.close();
-  }, [isOnline, setIncomingOrder]);
   const [location, setLocation] = useState("Block A · Room 214");
   const [searchQuery, setSearchQuery] = useState("");
   const [showLocationPopup, setShowLocationPopup] = useState(false);
@@ -72,7 +50,21 @@ function Index() {
   const handleGoLive = (status: boolean) => {
     setOnline(status);
     if (status) {
-      toast.success("You are now online! 🟢 Waiting for orders...");
+      toast.success("You are now online! 🟢");
+      // Simulate incoming order after 3 seconds
+      setTimeout(() => {
+        setIncomingOrder({
+          id: "ord-123",
+          items: ["Masala Maggi Cup", "Cold Coffee"],
+          earnings: 35,
+          exp: 50,
+          pickupLocation: "Hostel Canteen",
+          pickupDistance: "200m",
+          dropoffLocation: "Room 402, Block B",
+          dropoffDistance: "500m",
+          eta: "9 min"
+        });
+      }, 3000);
     } else {
       setIncomingOrder(null);
     }
@@ -94,15 +86,14 @@ function Index() {
               </p>
             </div>
           </button>
-          
+
           {/* Capsule Go Live Button */}
-          <button 
+          <button
             onClick={() => handleGoLive(!isOnline)}
-            className={`relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
-              isOnline 
-                ? "bg-success/15 text-success ring-1 ring-success/30" 
+            className={`relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${isOnline
+                ? "bg-success/15 text-success ring-1 ring-success/30"
                 : "bg-foreground/10 text-foreground"
-            }`}
+              }`}
           >
             {isOnline && <span className="absolute -left-1 -top-1 h-2.5 w-2.5 animate-ping rounded-full bg-success opacity-75" />}
             {isOnline && <span className="absolute -left-1 -top-1 h-2.5 w-2.5 rounded-full bg-success" />}
@@ -162,7 +153,7 @@ function Index() {
                 </span>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-around border-t border-success/10 pt-3">
               <div className="text-center">
                 <p className="text-xl font-bold text-foreground">₹0</p>
@@ -277,7 +268,7 @@ function Index() {
                     <span className="text-sm font-bold">₹{p.price}</span>
                     {p.mrp && <span className="text-[10px] text-muted-foreground line-through">₹{p.mrp}</span>}
                   </div>
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.preventDefault();
                       addToCart(p);
@@ -320,11 +311,10 @@ function Index() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span
-                    className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                      l.tag === "Lend"
+                    className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${l.tag === "Lend"
                         ? "bg-success/15 text-success"
                         : "bg-warning/20 text-warning-foreground"
-                    }`}
+                      }`}
                   >
                     {l.tag === "Lend" ? "LENDING" : "NEEDS"}
                   </span>
@@ -413,15 +403,13 @@ function Index() {
                     setShowLocationPopup(false);
                     toast.success("Location updated!");
                   }}
-                  className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all active:scale-[0.98] ${
-                    location === addr
+                  className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all active:scale-[0.98] ${location === addr
                       ? "border-primary bg-primary/5 shadow-soft"
                       : "border-border bg-background hover:bg-secondary/50"
-                  }`}
+                    }`}
                 >
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                    location === addr ? "bg-primary text-primary-foreground" : "bg-secondary"
-                  }`}>
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-full ${location === addr ? "bg-primary text-primary-foreground" : "bg-secondary"
+                    }`}>
                     <MapPin className="h-4 w-4" />
                   </div>
                   <span className="text-sm font-semibold flex-1">{addr}</span>
