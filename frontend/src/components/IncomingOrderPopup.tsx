@@ -44,7 +44,7 @@ export function IncomingOrderPopup() {
   const handlePointerUp = () => {
     if (!dragging) return;
     setDragging(false);
-    
+
     // Accept order threshold
     if (dragX > getMaxX() * 0.75) {
       setAccepted(true);
@@ -67,7 +67,7 @@ export function IncomingOrderPopup() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-background/80 p-4 pb-8 backdrop-blur-md transition-all duration-500 animate-in fade-in zoom-in-95">
-      <div 
+      <div
         className="w-full max-w-[480px] overflow-hidden rounded-[32px] border border-border bg-card shadow-[0_20px_60px_rgba(0,0,0,0.3)] transition-all duration-300"
         style={{ transform: accepted ? "scale(0.95)" : "scale(1)", opacity: accepted ? 0.8 : 1 }}
       >
@@ -78,7 +78,7 @@ export function IncomingOrderPopup() {
             <path d="M 10 90 Q 30 10 90 20" fill="none" stroke="var(--color-primary)" strokeWidth="4" strokeDasharray="6 6" />
           </svg>
           <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
-          
+
           {/* Incoming Order Badge */}
           <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-brand px-4 py-1.5 shadow-[0_0_20px_rgba(var(--color-brand),0.5)]">
             <p className="text-xs font-bold uppercase tracking-widest text-brand-foreground animate-pulse">
@@ -181,8 +181,8 @@ export function IncomingOrderPopup() {
               {accepted ? <Check className="h-6 w-6" strokeWidth={3} /> : <ChevronRight className="h-7 w-7" strokeWidth={2.5} />}
             </div>
           </div>
-          
-          <button 
+
+          <button
             onClick={() => {
               setIncomingOrder(null);
             }}

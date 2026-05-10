@@ -52,7 +52,7 @@ function MerchantOrders() {
           eta: o.eta || "5 min"
         }));
         setOrders(mapped);
-        
+
         // Update the global store pending count live
         const pendingCount = mapped.filter((o: any) => o.status === "new").length;
         setPending(pendingCount);
@@ -65,13 +65,13 @@ function MerchantOrders() {
   useEffect(() => {
     fetchOrders();
     const socket = socketService.connect();
-    
+
     const handleNewOrder = () => {
       fetchOrders();
     };
-    
+
     socket?.on("new_order", handleNewOrder);
-    
+
     return () => {
       socket?.off("new_order", handleNewOrder);
     };
@@ -89,7 +89,7 @@ function MerchantOrders() {
   const updateStatus = async (id: string, status: Order["status"]) => {
     // Optimistic UI update
     setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
-    
+
     try {
       const backendStatus = status === "new" ? "pending" : status;
       await api.post("/merchant/update-order-status", { order_id: id, status: backendStatus });
@@ -103,6 +103,25 @@ function MerchantOrders() {
     setExpandedBills((prev) => new Set(prev).add(order.id));
     incrementAccepted();
     toast.success("Order accepted!");
+
+    // Broadcast to runners automatically (for real cross-tab flow)
+    const bc = new BroadcastChannel("unidrop-orders");
+    bc.postMessage({ type: "NEW_ORDER", order });
+    bc.close();
+
+    // Fallback auto-assignment if no real runner accepts within 4 seconds
+    setTimeout(() => {
+      setOrders((prev) => {
+        const target = prev.find((o) => o.id === order.id);
+        if (target && target.status === "preparing") {
+          const runners = ["Aarav S.", "Priya K.", "Rohan M.", "Sneha R."];
+          const runner = runners[Math.floor(Math.random() * runners.length)];
+          toast.success(`Courier ${runner} auto-assigned!`);
+          return prev.map((o) => (o.id === order.id ? { ...o, status: "assigned" as const, runner } : o));
+        }
+        return prev;
+      });
+    }, 4000);
   };
 
   const rejectOrder = async (id: string) => {
@@ -112,16 +131,17 @@ function MerchantOrders() {
   };
 
   const assignRunner = async (id: string) => {
+    const runners = ["Aarav S.", "Priya K.", "Rohan M.", "Sneha R."];
+    const runner = runners[Math.floor(Math.random() * runners.length)];
+    
+    // Optimistic UI update
+    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: "assigned" as const, runner } : o)));
+    toast.success(`Courier ${runner} assigned!`);
+
     try {
       await api.post("/merchant/assign-courier", { order_id: id });
-      toast.success(`AI Courier Assigned!`);
-      fetchOrders();
     } catch (err) {
-      // Local fallback for demo / standalone frontend testing
-      const runners = ["Aarav S.", "Priya K.", "Rohan M.", "Sneha R."];
-      const runner = runners[Math.floor(Math.random() * runners.length)];
-      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: "assigned" as const, runner } : o)));
-      toast.success(`Courier ${runner} assigned!`);
+      console.warn("Backend failed to assign courier, but local state was updated.");
     }
   };
 
@@ -160,9 +180,8 @@ function MerchantOrders() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold capitalize transition-all ${
-                filter === f ? "bg-gradient-to-r from-red-500 to-rose-600 text-white" : "bg-secondary text-muted-foreground"
-              }`}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold capitalize transition-all ${filter === f ? "bg-gradient-to-r from-red-500 to-rose-600 text-white" : "bg-secondary text-muted-foreground"
+                }`}
             >
               {f} {f !== "all" && <span className="opacity-60">({orders.filter((o) => o.status === f).length})</span>}
             </button>
@@ -178,9 +197,8 @@ function MerchantOrders() {
             return (
               <div
                 key={o.id + i}
-                className={`rounded-2xl border bg-card overflow-hidden transition-all ${
-                  o.status === "new" ? "border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.08)]" : "border-border"
-                }`}
+                className={`rounded-2xl border bg-card overflow-hidden transition-all ${o.status === "new" ? "border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.08)]" : "border-border"
+                  }`}
                 style={{ animation: o.time === "Just now" ? "fade-up 0.4s ease-out" : undefined }}
               >
                 {/* Order Card */}
