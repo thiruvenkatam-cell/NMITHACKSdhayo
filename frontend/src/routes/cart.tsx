@@ -63,8 +63,9 @@ function Cart() {
         navigate({ to: "/track", search: { orderId: res.data.order.order_id } });
       }, 1000);
       
-    } catch (err) {
-      toast.error("Failed to place order.");
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || "Unknown error";
+      toast.error("Failed to place order: " + errorMessage);
       setIsProcessing(false);
     }
   };
