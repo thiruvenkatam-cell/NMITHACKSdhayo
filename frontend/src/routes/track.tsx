@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { MobileShell } from "@/components/MobileShell";
 import { TopBar } from "@/components/TopBar";
 import { useRunnerStore } from "@/lib/store";
@@ -97,20 +97,22 @@ const NOTIFICATIONS: Record<number, string> = {
 
 function Track() {
   const search = Route.useSearch();
-  const orderId = search.orderId;
-  const { isOnline: isLive, setOnline: setIsLive, isReceivingOrder, setReceivingOrder } = useRunnerStore();
+  const navigate = useNavigate();
+  const { isOnline: isLive, setOnline: setIsLive, isReceivingOrder, setReceivingOrder, activeOrderId, activeOrderType, activeLendRequestId } = useRunnerStore();
+  const actualOrderId = search.orderId || activeOrderId;
   const [showChat, setShowChat] = useState(false);
   const [showRating, setShowRating] = useState(false);
+  const [matchStatus, setMatchStatus] = useState<"searching" | "matched">("searching");
   const [currentStage, setCurrentStage] = useState(0);
   const [etaMinutes, setEtaMinutes] = useState(4);
   const [etaSeconds, setEtaSeconds] = useState(0);
   const [campusLabel, setCampusLabel] = useState(CAMPUS_LABELS[0]);
   const [showOtp, setShowOtp] = useState(false);
   const [otpConfirmed, setOtpConfirmed] = useState(false);
-  const [liveStage, setLiveStage] = useState("On way");
+  const [liveStage, setLiveStage] = useState("Accepted");
   const [liveEta, setLiveEta] = useState("4 min");
-  const [liveProgress, setLiveProgress] = useState(55);
-  const [courierName, setCourierName] = useState("Aarav");
+  const [liveProgress, setLiveProgress] = useState(10);
+  const [courierName, setCourierName] = useState("Finding...");
   const [deliveryOtp] = useState(() => Math.floor(1000 + Math.random() * 9000).toString());
   const mapInstanceRef = useRef<LeafletMap | null>(null);
   const runnerMarkerRef = useRef<unknown>(null);
@@ -120,95 +122,58 @@ function Track() {
   useEffect(() => {
     const socket = socketService.connect();
     
+    socket.on('order_accepted', (data: any) => {
+      setCourierName(data.courier_name);
+      setMatchStatus("matched");
+      toast.success(`${data.courier_name} accepted your delivery!`);
+    });
+
     socket.on('delivery_update', (data: any) => {
-      if (data.stage) setLiveStage(data.stage);
-      if (data.eta) setLiveEta(data.eta);
-      if (data.progress) setLiveProgress(data.progress);
+      setMatchStatus("matched");
+      if (data.stage !== undefined) setLiveStage(data.stage);
+      if (data.stage_index !== undefined) setCurrentStage(data.stage_index);
+      if (data.eta !== undefined) {
+        setEtaMinutes(data.eta);
+        setEtaSeconds(0);
+      }
+      if (data.progress !== undefined) setLiveProgress(data.progress);
       if (data.courier) setCourierName(data.courier);
-      if (data.label) toast.info(data.label);
+      if (data.label) {
+        setCampusLabel(data.label);
+        toast.info(data.label);
+      }
     });
 
     socket.on('eta_update', (data: any) => {
-      if (data.eta) setLiveEta(data.eta);
-      if (data.progress) setLiveProgress(data.progress);
+      if (data.eta !== undefined) {
+        setEtaMinutes(data.eta);
+      }
     });
 
     socket.on('delivery_completed', (data: any) => {
       setShowOtp(true);
       setLiveStage("Delivered");
+      setCurrentStage(STAGES.length - 1);
       setLiveProgress(100);
       toast.success(data.message || "Order delivered! 🎉");
     });
 
     return () => {
+      socket.off('order_accepted');
       socket.off('delivery_update');
       socket.off('eta_update');
       socket.off('delivery_completed');
     };
   }, []);
 
-  // --- Realtime simulation engine ---
   useEffect(() => {
-    if (isLive || !orderId) return;
-    const stageTimer = setInterval(() => {
-      setCurrentStage((prev) => {
-        if (prev >= STAGES.length - 1) return prev;
-        return prev + 1;
-      });
-    }, 6000);
-    return () => clearInterval(stageTimer);
-  }, [isLive, orderId]);
-
-  useEffect(() => {
-    if (isLive) return;
-    if (!notifiedStages.current.has(currentStage)) {
-      notifiedStages.current.add(currentStage);
-      const msg = NOTIFICATIONS[currentStage];
-      if (msg) toast(msg, { duration: 3000 });
+    // If the active order is a lending request, redirect the user automatically to the lending track page.
+    if (activeOrderType === "lend" && activeLendRequestId && !search.orderId) {
+      navigate({ to: "/lend-track", search: { requestId: activeLendRequestId } });
     }
-    const labelIndex = Math.min(
-      Math.floor((currentStage / (STAGES.length - 1)) * (CAMPUS_LABELS.length - 1)),
-      CAMPUS_LABELS.length - 1
-    );
-    setCampusLabel(CAMPUS_LABELS[labelIndex]);
-    if (currentStage >= STAGES.length - 1) setShowOtp(true);
-  }, [currentStage, isLive]);
+  }, [activeOrderType, activeLendRequestId, search.orderId, navigate]);
 
-  useEffect(() => {
-    if (isLive) return;
-    if (currentStage >= STAGES.length - 1) {
-      setEtaMinutes(0);
-      setEtaSeconds(0);
-      return;
-    }
-    const etaTimer = setInterval(() => {
-      setEtaSeconds((prevSec) => {
-        if (prevSec <= 0) {
-          setEtaMinutes((prevMin) => (prevMin <= 0 ? 0 : prevMin - 1));
-          return 59;
-        }
-        return prevSec - 1;
-      });
-    }, 1000);
-    return () => clearInterval(etaTimer);
-  }, [currentStage, isLive]);
-
-  useEffect(() => {
-    if (isLive || currentStage >= STAGES.length - 1) return;
-    const labelTimer = setInterval(() => {
-      setCampusLabel((prev) => {
-        const idx = CAMPUS_LABELS.indexOf(prev);
-        const maxIdx = Math.min(
-          Math.floor(((currentStage + 1) / (STAGES.length - 1)) * (CAMPUS_LABELS.length - 1)),
-          CAMPUS_LABELS.length - 1
-        );
-        const minIdx = Math.floor((currentStage / (STAGES.length - 1)) * (CAMPUS_LABELS.length - 1));
-        const nextIdx = idx >= maxIdx ? minIdx : idx + 1;
-        return CAMPUS_LABELS[nextIdx];
-      });
-    }, 4000);
-    return () => clearInterval(labelTimer);
-  }, [currentStage, isLive]);
+  // --- Local simulations removed in favor of strict Socket.IO syncing ---
 
   const routeProgress = Math.min((currentStage / (STAGES.length - 1)) * 100, 100);
   const isDelivered = currentStage >= STAGES.length - 1;
@@ -264,7 +229,7 @@ function Track() {
           <motion.div key="courier" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
             <CourierFlow />
           </motion.div>
-        ) : !orderId ? (
+        ) : !actualOrderId ? (
           <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center pt-32 px-6 text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-secondary text-4xl mb-6">
               📦
@@ -276,6 +241,20 @@ function Track() {
             <Link to="/store" className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-pop transition-transform active:scale-95">
               Browse Store
             </Link>
+          </motion.div>
+        ) : matchStatus === "searching" ? (
+          <motion.div key="searching" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="flex flex-col items-center justify-center pt-24 px-6 text-center">
+            <div className="relative mb-8 flex items-center justify-center">
+              <motion.div className="absolute h-32 w-32 rounded-full border-2 border-primary/20" animate={{ scale: [1, 2], opacity: [0.8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }} />
+              <motion.div className="absolute h-32 w-32 rounded-full border-2 border-primary/40" animate={{ scale: [1, 2], opacity: [0.8, 0] }} transition={{ duration: 2, repeat: Infinity, delay: 0.5, ease: "easeOut" }} />
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10 text-4xl shadow-pop">
+                🚴
+              </div>
+            </div>
+            <h2 className="text-xl font-bold mb-2">Finding a partner...</h2>
+            <p className="text-sm text-muted-foreground mb-8 max-w-[250px]">
+              We are broadcasting your order to nearby students. Please hold on!
+            </p>
           </motion.div>
         ) : (
           <motion.div key="buyer" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30 }}>

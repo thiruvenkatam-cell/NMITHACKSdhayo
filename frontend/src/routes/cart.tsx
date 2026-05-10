@@ -21,6 +21,7 @@ function Cart() {
   const [paymentMethod, setPaymentMethod] = useState("UPI");
   const [showAddressPopup, setShowAddressPopup] = useState(false);
   const [customAddress, setCustomAddress] = useState("");
+  const [showConfirmCheckout, setShowConfirmCheckout] = useState(false);
 
   const subtotal = getSubtotal();
   const platformFee = items.length > 0 ? 5 : 0;
@@ -30,7 +31,16 @@ function Cart() {
   const handleCheckout = async () => {
     if (items.length === 0) return;
     setIsProcessing(true);
-    setMatchStatus("Processing payment...");
+    
+    // Step 1: Checking Inventory
+    setMatchStatus("Checking availability...");
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    // Step 2: Payment Gateway
+    setMatchStatus("Securing payment...");
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    setMatchStatus("Confirming order...");
     
     try {
       const itemString = items.map(i => `${i.name} x ${i.qty}`).join(", ");
@@ -43,10 +53,13 @@ function Cart() {
         payment_method: paymentMethod
       });
       
-      setMatchStatus("Order placed successfully!");
+      setMatchStatus("Order Placed Successfully!");
       setTimeout(() => {
         clearCart();
-        // Pass order ID if track page needs it, or just rely on backend socket
+        import("@/lib/store").then(m => {
+          m.runnerActions.setOnline(false); // Force offline
+          m.runnerActions.setActiveOrderId(res.data.order.order_id);
+        });
         navigate({ to: "/track", search: { orderId: res.data.order.order_id } });
       }, 1000);
       
@@ -206,12 +219,14 @@ function Cart() {
 
       {/* Sticky Checkout Bar */}
       <div
-        className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] border-t border-border bg-card px-4 pb-6 pt-3 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] md:pb-4"
+        className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] sm:max-w-[640px] border-t border-border bg-card px-4 pb-6 pt-3 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] md:pb-4"
         style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
       >
         <button
-          onClick={handleCheckout}
-          disabled={isProcessing}
+          onClick={() => {
+            if (items.length > 0) setShowConfirmCheckout(true);
+          }}
+          disabled={isProcessing || items.length === 0}
           className="flex w-full items-center justify-between rounded-xl bg-primary px-5 py-4 text-primary-foreground shadow-pop transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:scale-100 disabled:opacity-90"
         >
           {isProcessing ? (
@@ -234,6 +249,35 @@ function Cart() {
           )}
         </button>
       </div>
+
+      {/* Confirmation Popup */}
+      {showConfirmCheckout && (
+        <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-black/50 px-4 py-8 sm:items-center">
+          <div className="w-full max-w-sm rounded-3xl bg-card p-6 shadow-2xl">
+            <h3 className="text-xl font-bold">Confirm Order</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Are you sure you want to place this order for <strong>₹{total}</strong>? We will notify nearby student partners immediately.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button 
+                onClick={() => setShowConfirmCheckout(false)}
+                className="flex-1 rounded-xl bg-secondary py-3 text-sm font-bold text-secondary-foreground shadow-soft active:scale-95 transition-transform"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  setShowConfirmCheckout(false);
+                  handleCheckout();
+                }}
+                className="flex-1 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-pop active:scale-95 transition-transform"
+              >
+                Yes, Place Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Address Change Popup */}
       {showAddressPopup && (

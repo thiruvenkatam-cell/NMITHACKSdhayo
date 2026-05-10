@@ -76,7 +76,7 @@ function Store() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 px-4 pb-6 md:grid-cols-3 md:gap-5 md:px-0 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 px-4 pb-6 sm:grid-cols-3 md:grid-cols-3 md:gap-5 md:px-0 lg:grid-cols-4 xl:grid-cols-5">
         {list.map((p) => (
           <Link
             to="/product/$id"

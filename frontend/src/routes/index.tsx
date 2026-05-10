@@ -21,7 +21,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const { addToCart } = useCartStore();
-  const { isOnline, setOnline, setIncomingOrder } = useRunnerStore();
+  const { isOnline, setOnline, setIncomingOrder, isReceivingOrder, activeOrderId, activeLendRequestId } = useRunnerStore();
   const [location, setLocation] = useState("Block A · Room 214");
   const [searchQuery, setSearchQuery] = useState("");
   const [showLocationPopup, setShowLocationPopup] = useState(false);
@@ -48,23 +48,14 @@ function Index() {
   };
 
   const handleGoLive = (status: boolean) => {
+    if (status && (isReceivingOrder || activeOrderId || activeLendRequestId)) {
+      toast.error("You cannot go online while you have an active order!");
+      return;
+    }
+    
     setOnline(status);
     if (status) {
       toast.success("You are now online! 🟢");
-      // Simulate incoming order after 3 seconds
-      setTimeout(() => {
-        setIncomingOrder({
-          id: "ord-123",
-          items: ["Masala Maggi Cup", "Cold Coffee"],
-          earnings: 35,
-          exp: 50,
-          pickupLocation: "Hostel Canteen",
-          pickupDistance: "200m",
-          dropoffLocation: "Room 402, Block B",
-          dropoffDistance: "500m",
-          eta: "9 min"
-        });
-      }, 3000);
     } else {
       setIncomingOrder(null);
     }
@@ -215,7 +206,7 @@ function Index() {
           <h2 className="text-base font-bold md:text-2xl">Shop by category</h2>
           <Link to="/store" className="text-xs font-semibold text-primary md:text-sm">See all</Link>
         </div>
-        <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 md:mx-0 md:grid md:grid-cols-8 md:gap-3 md:overflow-visible md:px-0">
+        <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:overflow-visible sm:px-0 md:mx-0 md:grid md:grid-cols-8 md:gap-3 md:overflow-visible md:px-0">
           {categories.map((c) => (
             <Link
               to="/store"
@@ -244,7 +235,7 @@ function Index() {
           </div>
           <Link to="/store" className="text-xs font-semibold text-primary md:text-sm">See all</Link>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5">
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-5">
           {products.slice(0, 4).map((p) => (
             <Link
               to="/product/$id"

@@ -63,14 +63,15 @@ def create_order():
     socketio.emit('new_order', {"order_id": order["order_id"], "status": "pending"})
     
     # Background matching
-    from utils.worker import run_background_task
-    from services.matching import calculate_match
-    
-    def async_match(order_obj):
-        match_result = calculate_match(order_obj)
-        print(f"Background Match Found: {match_result}")
-        
-    run_background_task(async_match, order)
+    # Disabled for real-time CourierFlow integration
+    # from utils.worker import run_background_task
+    # from services.matching import calculate_match
+    # 
+    # def async_match(order_obj):
+    #     match_result = calculate_match(order_obj)
+    #     print(f"Background Match Found: {match_result}")
+    #     
+    # run_background_task(async_match, order)
     
     # Surge pricing
     pending_count = mongo.db.merchant_orders.count_documents({"status": "pending"})

@@ -2,13 +2,26 @@ from flask import Blueprint, request, jsonify
 from extensions import mongo
 import uuid
 import datetime
+from utils.auth import token_required
 
 merchant_products_bp = Blueprint('merchant_products_bp', __name__)
 
-@merchant_products_bp.route('/merchant/add-product', methods=['POST'])
-def add_product():
+@merchant_products_bp.route('/merchant/generate-emoji', methods=['POST'])
+def generate_emoji():
     data = request.json
-    merchant_id = data.get('merchant_id', 'demo_merchant_1')
+    name = data.get('name', '')
+    if not name:
+        return jsonify({"emoji": "📦"})
+    
+    from services.gemini_service import generate_product_emoji
+    emoji = generate_product_emoji(name)
+    return jsonify({"emoji": emoji})
+
+@merchant_products_bp.route('/merchant/add-product', methods=['POST'])
+@token_required
+def add_product(current_user):
+    data = request.json
+    merchant_id = current_user.get('user_id', 'demo_merchant_1')
     
     product_id = str(uuid.uuid4())
     product = {
@@ -20,6 +33,7 @@ def add_product():
         "price": data.get('price', 0),
         "stock": data.get('stock', 0),
         "image_url": data.get('image_url', ''),
+        "emoji": data.get('emoji', '📦'),
         "ETA": data.get('ETA', '10 mins'),
         "is_active": True,
         "created_at": datetime.datetime.utcnow().isoformat()
@@ -37,11 +51,12 @@ def get_products():
     return jsonify({"products": products})
 
 @merchant_products_bp.route('/merchant/update-product/<product_id>', methods=['PUT'])
-def update_product(product_id):
+@token_required
+def update_product(current_user, product_id):
     data = request.json
     
     update_fields = {}
-    for key in ['name', 'description', 'category', 'price', 'stock', 'image_url', 'ETA', 'is_active']:
+    for key in ['name', 'description', 'category', 'price', 'stock', 'image_url', 'emoji', 'ETA', 'is_active']:
         if key in data:
             update_fields[key] = data[key]
             
@@ -59,7 +74,8 @@ def update_product(product_id):
     return jsonify({"message": "Product updated successfully"})
 
 @merchant_products_bp.route('/merchant/delete-product/<product_id>', methods=['DELETE'])
-def delete_product(product_id):
+@token_required
+def delete_product(current_user, product_id):
     result = mongo.db.merchant_products.delete_one({"product_id": product_id})
     if result.deleted_count == 0:
         return jsonify({"message": "Product not found"}), 404

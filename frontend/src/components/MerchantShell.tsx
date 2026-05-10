@@ -63,13 +63,13 @@ export function MerchantShell({ children }: { children: ReactNode }) {
 
       {/* Main content */}
       <div className="flex-1 md:min-w-0">
-        <div className="mx-auto w-full max-w-[480px] pb-24 md:max-w-[1240px] md:px-8 md:pb-12 md:pt-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="mx-auto w-full max-w-[480px] pb-28 sm:max-w-[640px] md:max-w-[1240px] md:px-8 md:pb-12 md:pt-2 animate-in fade-in slide-in-from-bottom-4 duration-300" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
           {children}
         </div>
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] border-t border-border bg-card/95 px-2 pb-3 pt-2 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] sm:max-w-[640px] border-t border-border bg-card/95 px-2 pb-3 pt-2 backdrop-blur-lg md:hidden" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
         <ul className="flex items-center justify-between">
           {tabs.map((t) => {
             const active = isActive(t.to);

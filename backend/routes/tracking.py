@@ -138,6 +138,33 @@ def handle_chat_message(data):
             'message': message
         }, to=order_id)
 
+@socketio.on('accept_order')
+def handle_accept_order(data):
+    """Courier accepts an order from the feed."""
+    order_id = data.get('order_id')
+    courier_name = data.get('courier_name', 'Student Runner')
+    if order_id:
+        # Notify the buyer that their order has been accepted
+        socketio.emit('order_accepted', {
+            'order_id': order_id,
+            'courier_name': courier_name,
+            'status': 'accepted'
+        }, to=order_id)
+
+@socketio.on('update_courier_stage')
+def handle_update_courier_stage(data):
+    """Courier app sends progress updates to sync the buyer's UI."""
+    order_id = data.get('order_id')
+    if order_id:
+        socketio.emit('delivery_update', {
+            'order_id': order_id,
+            'stage': data.get('stage'),
+            'eta': data.get('eta'),
+            'progress': data.get('progress'),
+            'courier': data.get('courier'),
+            'label': data.get('label')
+        }, to=order_id)
+
 
 # ─── Lending Timeline Socket Events ──────────────────────────────
 
@@ -210,13 +237,14 @@ def handle_start_lend_flow(data):
 
             # Steps 5-7 are triggered by user actions (OTP verify, return, rate)
 
-    import threading
-    thread = threading.Thread(
-        target=run_lend_simulation,
-        args=(app, request_id, item_title)
-    )
-    thread.daemon = True
-    thread.start()
+    # Automatically starting the thread skips the initial phases too fast for demo purposes.
+    # Users will use the '[Demo] Simulate next step' button in lend-track.tsx to advance manually.
+    # thread = threading.Thread(
+    #     target=run_lend_simulation,
+    #     args=(app, request_id, item_title)
+    # )
+    # thread.daemon = True
+    # thread.start()
 
 
 @socketio.on('verify_handover_otp')

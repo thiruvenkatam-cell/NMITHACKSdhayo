@@ -118,7 +118,7 @@ function Lend() {
         </div>
       </div>
 
-      <div className="grid gap-3 px-4 pb-6 md:grid-cols-2 md:gap-4 md:px-0 lg:grid-cols-3">
+      <div className="grid gap-3 px-4 pb-6 sm:grid-cols-2 md:grid-cols-2 md:gap-4 md:px-0 lg:grid-cols-3">
         {list.map((l) => (
           <div
             key={l.id}

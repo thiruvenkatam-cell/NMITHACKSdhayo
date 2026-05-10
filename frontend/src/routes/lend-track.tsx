@@ -3,10 +3,9 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/MobileShell";
 import { TopBar } from "@/components/TopBar";
-import MapContainer, { type TileStyle } from "@/components/MapContainer";
-import { useAuth } from "@/lib/store";
+
+import { useAuth, useRunnerStore } from "@/lib/store";
 import { Star, MessageCircle, Navigation, CheckCircle2, Circle, Loader2, MapPin, Key, Clock, Award, Shield } from "lucide-react";
-import type { Map as LeafletMap } from "leaflet";
 import { socketService } from "@/lib/socket";
 
 type LendTrackSearch = {
@@ -42,15 +41,16 @@ function LendTrack() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [tileStyle, setTileStyle] = useState<TileStyle>("streets");
-  const [showTilePicker, setShowTilePicker] = useState(false);
-  const [lenderInfo, setLenderInfo] = useState<{ name: string; distance: string; rating: number } | null>(null);
+  const { lendActiveStep, setLendActiveStep, lendLenderInfo, setLendLenderInfo } = useRunnerStore();
+
   
   // Timeline State
-  const [activeStep, setActiveStep] = useState(1);
-  const mapRef = useRef<LeafletMap | null>(null);
-  const lenderMarkerRef = useRef<unknown>(null);
-  const polylineRef = useRef<unknown>(null);
+  const activeStep = lendActiveStep;
+  const setActiveStep = setLendActiveStep;
+  const lenderInfo = lendLenderInfo;
+  const setLenderInfo = setLendLenderInfo;
+
+
 
   const lenderName = search.lender || "Priya Sharma";
   const lenderDistance = search.distance || "~150m";
@@ -100,58 +100,7 @@ function LendTrack() {
     return () => clearTimeout(fallback);
   }, [activeStep]);
 
-  // Leaflet Map Logic
-  const handleMapReady = async (map: LeafletMap) => {
-    mapRef.current = map;
-    const L = await import("leaflet");
 
-    const userLatLng: [number, number] = [19.1334, 72.9133];
-    const userIcon = L.divIcon({
-      className: "",
-      html: `<div style="width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.25);font-size:20px;display:flex;align-items:center;justify-content:center;">📍</div>`,
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-    });
-
-    L.marker(userLatLng, { icon: userIcon }).addTo(map).bindPopup("You");
-
-    if (lenderInfo) {
-      addLenderMarkerAndLine(L, map, userLatLng);
-    }
-  };
-
-  const addLenderMarkerAndLine = (L: any, map: LeafletMap, userLatLng: [number, number]) => {
-    if (lenderMarkerRef.current) (lenderMarkerRef.current as any).remove();
-    if (polylineRef.current) (polylineRef.current as any).remove();
-
-    const lenderLatLng: [number, number] = [19.1345, 72.9148];
-    const lenderIcon = L.divIcon({
-      className: "",
-      html: `<div style="width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.25);font-size:20px;display:flex;align-items:center;justify-content:center;">👤</div>`,
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-    });
-    const marker = L.marker(lenderLatLng, { icon: lenderIcon }).addTo(map).bindPopup(lenderInfo!.name);
-    lenderMarkerRef.current = marker;
-
-    const line = L.polyline([userLatLng, lenderLatLng], {
-      color: "var(--color-primary)",
-      weight: 4,
-      dashArray: "6,6",
-    }).addTo(map);
-    polylineRef.current = line;
-
-    const bounds = L.latLngBounds([userLatLng, lenderLatLng]);
-    map.fitBounds(bounds, { padding: [60, 60] });
-  };
-
-  useEffect(() => {
-    if (!lenderInfo || !mapRef.current) return;
-    import("leaflet").then((L) => {
-      const userLatLng: [number, number] = [19.1334, 72.9133];
-      addLenderMarkerAndLine(L, mapRef.current!, userLatLng);
-    });
-  }, [lenderInfo]);
 
   const getStepIcon = (stepId: number) => {
     if (stepId < activeStep) return <CheckCircle2 className="h-5 w-5 text-primary" />;
@@ -166,59 +115,46 @@ function LendTrack() {
     <MobileShell>
       <TopBar title="Order Status" />
       
-      {/* Map Section - Only visible from step 4 onwards */}
-      {activeStep >= 4 && (
-        <div className="relative h-[240px] w-full overflow-hidden border-b border-border shadow-sm md:rounded-3xl md:border md:m-4 md:w-auto">
-          <MapContainer
-            center={[19.1334, 72.9133]}
-            zoom={16}
-            tileStyle={tileStyle}
-            onMapReady={handleMapReady}
-            className="h-full w-full z-0"
-          />
-          <div className="absolute right-3 top-3 z-[1000]">
-            <button
-              onClick={() => setShowTilePicker(!showTilePicker)}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-pop transition-transform hover:scale-105 active:scale-95"
-            >
-              <Navigation className="h-4 w-4" />
-            </button>
-            {showTilePicker && (
-              <div className="absolute right-0 top-12 flex gap-1.5 rounded-2xl bg-card/95 p-2 shadow-pop backdrop-blur-sm">
-                {(["streets", "dark", "satellite"] as const).map((style) => (
-                  <button
-                    key={style}
-                    onClick={() => {
-                      setTileStyle(style);
-                      setShowTilePicker(false);
-                    }}
-                    className={`flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-bold transition-all ${
-                      tileStyle === style ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-                    }`}
-                  >
-                    {style === "streets" ? "🗺️" : style === "dark" ? "🌙" : "🛰️"}
-                    {style}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="absolute bottom-3 left-3 right-3 z-[1000] rounded-xl bg-card/95 backdrop-blur-md p-3 shadow-pop border border-border flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold">Meet at Library Entrance</p>
-              <p className="text-[10px] text-muted-foreground">Estimated: ~5 mins</p>
-            </div>
-            {lenderInfo && (
-              <button onClick={() => navigate({ to: '/chat/$id', params: { id: lenderInfo.name } })} className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-95">
-                <MessageCircle className="h-4 w-4" />
-              </button>
-            )}
+
+
+      {/* Timeline Section */}
+      <div className="flex-1 overflow-y-auto p-4 pb-32">
+        <div className="mx-auto max-w-lg rounded-3xl border border-border bg-card p-5 shadow-sm">
+          <h2 className="mb-6 text-sm font-bold tracking-tight text-foreground">Timeline</h2>
+          <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:border-l-2 before:border-border md:before:ml-[1.35rem]">
+            {TIMELINE_STEPS.map((step) => {
+              const isPast = step.id < activeStep;
+              const isCurrent = step.id === activeStep;
+              return (
+                <div key={step.id} className="relative flex items-start gap-4">
+                  <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card">
+                    {getStepIcon(step.id)}
+                  </div>
+                  <div className="pt-2">
+                    <p className={`text-sm font-bold ${isCurrent ? 'text-primary' : isPast ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      {step.title}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{step.desc}</p>
+                    
+                    {/* Render Match Card if matched */}
+                    {isCurrent && step.id === 2 && lenderInfo && (
+                      <div className="mt-3 flex items-center gap-3 rounded-xl border border-border bg-background p-3 shadow-sm animate-in fade-in slide-in-from-top-2">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-lg">👤</div>
+                        <div>
+                          <p className="text-xs font-bold">Matched with {lenderInfo.name}</p>
+                          <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <Star className="h-3 w-3 fill-warning text-warning" /> {lenderInfo.rating} · {lenderInfo.distance} away
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      )}
-
-
-      {/* Advance Demo Button (for testing/hackathon purposes) */}
+      </div>      {/* Advance Demo Button (for testing/hackathon purposes) */}
       <div className="p-4 bg-background border-t border-border mb-16 md:mb-0">
         <button 
           onClick={() => setActiveStep(prev => prev < 7 ? prev + 1 : 1)}

@@ -36,7 +36,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function Profile() {
-  const { isOnline, setOnline, setIncomingOrder, isReceivingOrder } = useRunnerStore();
+  const { isOnline, setOnline, setIncomingOrder, isReceivingOrder, activeOrderId, activeLendRequestId } = useRunnerStore();
   const { user: authUser } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
@@ -61,8 +61,9 @@ function Profile() {
   ];
 
   const handleGoLive = () => {
-    if (!isOnline && isReceivingOrder) {
-      toast.error("You cannot go online while receiving an order!");
+    // If they have an active delivery or lending order, block them from going online
+    if (!isOnline && (isReceivingOrder || activeOrderId || activeLendRequestId)) {
+      toast.error("You cannot go online while you have an active order!");
       return;
     }
     // Simply toggle online status. Real orders will come via socket.
@@ -206,7 +207,7 @@ function SettingsPanel({ user, onClose }: { user: any, onClose: () => void }) {
 
       {/* Panel */}
       <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
-        <div className="w-full max-w-[480px] pointer-events-auto rounded-t-3xl border-t border-border bg-card shadow-pop animate-in slide-in-from-bottom duration-300">
+        <div className="w-full max-w-[480px] sm:max-w-[640px] pointer-events-auto rounded-t-3xl border-t border-border bg-card shadow-pop animate-in slide-in-from-bottom duration-300">
           {/* Handle + Header */}
           <div className="flex flex-col items-center pt-3 pb-2">
             <div className="h-1 w-10 rounded-full bg-border" />

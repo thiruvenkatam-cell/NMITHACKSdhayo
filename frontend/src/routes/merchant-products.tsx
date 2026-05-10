@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { MerchantShell } from "@/components/MerchantShell";
 import { TopBar } from "@/components/TopBar";
-import { Plus, Search, Edit3, Trash2, TrendingUp, Package } from "lucide-react";
+import { Plus, Search, Edit3, Trash2, TrendingUp, Package, Sparkles, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/merchant-products")({
   component: MerchantProducts,
@@ -35,8 +35,10 @@ function MerchantProducts() {
   const [showAdd, setShowAdd] = useState(false);
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
   const [formName, setFormName] = useState("");
+  const [formEmoji, setFormEmoji] = useState("📦");
   const [formPrice, setFormPrice] = useState("");
   const [formStock, setFormStock] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const fetchProducts = async () => {
     try {
@@ -48,7 +50,7 @@ function MerchantProducts() {
           price: p.price,
           stock: p.stock,
           available: p.is_available,
-          emoji: p.category === "snacks" ? "🥟" : p.category === "drinks" ? "🧋" : "📦",
+          emoji: p.emoji || (p.category === "snacks" ? "🥟" : p.category === "drinks" ? "🧋" : "📦"),
           category: p.category || "snacks",
           popularity: Math.floor(Math.random() * 100),
           eta: "5 min"
@@ -98,20 +100,39 @@ function MerchantProducts() {
     toast.success(`${item?.name} removed`);
   };
 
-  const openAdd = () => { setFormName(""); setFormPrice(""); setFormStock(""); setEditItem(null); setShowAdd(true); };
-  const openEdit = (item: MenuItem) => { setFormName(item.name); setFormPrice(String(item.price)); setFormStock(String(item.stock)); setEditItem(item); setShowAdd(true); };
+  const openAdd = () => { setFormName(""); setFormPrice(""); setFormStock(""); setFormEmoji("📦"); setEditItem(null); setShowAdd(true); };
+  const openEdit = (item: MenuItem) => { setFormName(item.name); setFormPrice(String(item.price)); setFormStock(String(item.stock)); setFormEmoji(item.emoji); setEditItem(item); setShowAdd(true); };
+
+  const generateEmoji = async () => {
+    if (!formName.trim()) {
+      toast.error("Please enter an item name first!");
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const res = await api.post("/merchant/generate-emoji", { name: formName });
+      if (res.data.emoji) {
+        setFormEmoji(res.data.emoji);
+        toast.success(`Generated: ${res.data.emoji}`);
+      }
+    } catch (err) {
+      toast.error("Failed to generate emoji");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const saveItem = async () => {
     if (!formName || !formPrice) return;
     try {
       if (editItem) {
         await api.put(`/merchant/update-product/${editItem.id}`, {
-          name: formName, price: Number(formPrice), stock: Number(formStock)
+          name: formName, price: Number(formPrice), stock: Number(formStock), emoji: formEmoji
         });
       } else {
         await api.post("/merchant/add-product", {
           name: formName, price: Number(formPrice), stock: Number(formStock) || 0,
-          category: "snacks", description: "", is_available: true
+          category: "snacks", description: "", is_available: true, emoji: formEmoji
         });
       }
     } catch (err) {
@@ -120,10 +141,10 @@ function MerchantProducts() {
     
     // Always update local state for a smooth UI experience
     if (editItem) {
-      setMenu(prev => prev.map(m => m.id === editItem.id ? { ...m, name: formName, price: Number(formPrice), stock: Number(formStock) } : m));
+      setMenu(prev => prev.map(m => m.id === editItem.id ? { ...m, name: formName, price: Number(formPrice), stock: Number(formStock), emoji: formEmoji } : m));
       toast.success(`${formName} updated`);
     } else {
-      const newItem = { id: `m${Date.now()}`, name: formName, price: Number(formPrice), stock: Number(formStock) || 0, available: true, emoji: "📦", category: "snacks", popularity: 0, eta: "5 min" };
+      const newItem = { id: `m${Date.now()}`, name: formName, price: Number(formPrice), stock: Number(formStock) || 0, available: true, emoji: formEmoji, category: "snacks", popularity: 0, eta: "5 min" };
       setMenu(prev => [newItem, ...prev]);
       toast.success(`${formName} added to menu`);
     }
@@ -209,7 +230,15 @@ function MerchantProducts() {
             <div className="space-y-3">
               <div>
                 <label className="text-[11px] font-semibold text-muted-foreground">Item Name</label>
-                <input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Masala Maggi" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-rose-500" />
+                <div className="flex gap-2">
+                  <input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Masala Maggi" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-rose-500" />
+                  <div className="flex flex-col mt-1 w-16 relative group">
+                    <input value={formEmoji} onChange={(e) => setFormEmoji(e.target.value)} className="w-full h-full rounded-xl border border-input bg-background text-center text-xl outline-none focus:border-rose-500" />
+                    <button onClick={generateEmoji} disabled={isGenerating} className="absolute -top-6 -right-2 flex items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-rose-600 p-1.5 text-white shadow-soft transition-transform active:scale-90 hover:scale-110 disabled:opacity-50" title="Auto-generate AI Emoji">
+                      {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                    </button>
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

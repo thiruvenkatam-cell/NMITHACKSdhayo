@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -15,7 +18,7 @@ def create_app():
     
     # Initialize plugins
     mongo.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*", async_mode='threading')
+    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
     
     with app.app_context():
         from services.matching import initialize_geospatial_indexes

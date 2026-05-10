@@ -25,6 +25,11 @@ let incomingOrder: IncomingOrder | null = null;
 let currentUser: any = null;
 let authLoading: boolean = true;
 let isReceivingOrder: boolean = false;
+let activeOrderId: string | null = null;
+let activeLendRequestId: string | null = null;
+let activeOrderType: "delivery" | "lend" | null = null;
+let lendActiveStep: number = 1;
+let lendLenderInfo: { name: string; distance: string; rating: number } | null = null;
 
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((l) => l());
@@ -73,6 +78,32 @@ export const runnerActions = {
     isReceivingOrder = status;
     notify();
   },
+  setActiveOrderId: (id: string | null) => {
+    activeOrderId = id;
+    if (id) activeOrderType = "delivery";
+    notify();
+  },
+  setActiveLendRequestId: (id: string | null) => {
+    activeLendRequestId = id;
+    if (id) activeOrderType = "lend";
+    notify();
+  },
+  setLendActiveStep: (step: number) => {
+    lendActiveStep = step;
+    notify();
+  },
+  setLendLenderInfo: (info: any) => {
+    lendLenderInfo = info;
+    notify();
+  },
+  clearActiveOrder: () => {
+    activeOrderId = null;
+    activeLendRequestId = null;
+    activeOrderType = null;
+    lendActiveStep = 1;
+    lendLenderInfo = null;
+    notify();
+  }
 };
 
 export const authActions = {
@@ -121,12 +152,22 @@ export function useRunnerStore() {
   const [online, setOnlineState] = useState(isOnline);
   const [order, setOrderState] = useState(incomingOrder);
   const [receiving, setReceivingState] = useState(isReceivingOrder);
+  const [activeOrder, setActiveOrderState] = useState(activeOrderId);
+  const [activeLendReq, setActiveLendReqState] = useState(activeLendRequestId);
+  const [orderType, setOrderTypeState] = useState(activeOrderType);
+  const [lActiveStep, setLActiveStepState] = useState(lendActiveStep);
+  const [lLenderInfo, setLLenderInfoState] = useState(lendLenderInfo);
 
   useEffect(() => {
     const update = () => {
       setOnlineState(isOnline);
       setOrderState(incomingOrder);
       setReceivingState(isReceivingOrder);
+      setActiveOrderState(activeOrderId);
+      setActiveLendReqState(activeLendRequestId);
+      setOrderTypeState(activeOrderType);
+      setLActiveStepState(lendActiveStep);
+      setLLenderInfoState(lendLenderInfo);
     };
     listeners.add(update);
     return () => { listeners.delete(update); };
@@ -136,6 +177,11 @@ export function useRunnerStore() {
     isOnline: online,
     incomingOrder: order,
     isReceivingOrder: receiving,
+    activeOrderId: activeOrder,
+    activeLendRequestId: activeLendReq,
+    activeOrderType: orderType,
+    lendActiveStep: lActiveStep,
+    lendLenderInfo: lLenderInfo,
     ...runnerActions,
   };
 }

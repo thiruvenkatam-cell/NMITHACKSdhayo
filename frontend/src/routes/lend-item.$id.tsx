@@ -18,6 +18,7 @@ function LendDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const handleBorrow = async () => {
     setIsLoading(true);
@@ -33,12 +34,16 @@ function LendDetail() {
       });
 
       const match = res.data.match;
+      const reqId = res.data.request?.request_id || `req_${Date.now()}`;
+      
+      // Save active request to store
+      import("@/lib/store").then(m => m.runnerActions.setActiveLendRequestId(reqId));
       
       // Navigate to lend-track page with real match info from backend
       navigate({
         to: '/lend-track',
         search: {
-          requestId: res.data.request?.request_id || `req_${Date.now()}`,
+          requestId: reqId,
           lender: match?.lender || l.by,
           distance: match?.distance || l.distance,
           rating: match?.rating || l.rating
@@ -47,10 +52,12 @@ function LendDetail() {
       toast.success("Request successful! Matching...");
     } catch (err: any) {
       // Fallback: still navigate even if backend is down
+      const fallbackReqId = `req_${Date.now()}`;
+      import("@/lib/store").then(m => m.runnerActions.setActiveLendRequestId(fallbackReqId));
       navigate({
         to: '/lend-track',
         search: {
-          requestId: `req_${Date.now()}`,
+          requestId: fallbackReqId,
           lender: l.by,
           distance: l.distance,
           rating: l.rating
@@ -139,7 +146,7 @@ function LendDetail() {
       >
         <button
           type="button"
-          onClick={handleBorrow}
+          onClick={() => setShowConfirmModal(true)}
           disabled={isLoading}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-pop disabled:opacity-70"
         >
@@ -153,6 +160,34 @@ function LendDetail() {
           )}
         </button>
       </div>
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-black/50 px-4 py-8 sm:items-center">
+          <div className="w-full max-w-sm rounded-3xl bg-card p-6 shadow-2xl">
+            <h3 className="text-xl font-bold">Confirm Request</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Are you sure you want to place a request for <strong>{l.title}</strong>? We will notify nearby lenders immediately.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button 
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 rounded-xl bg-secondary py-3 text-sm font-bold text-secondary-foreground shadow-soft active:scale-95 transition-transform"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  handleBorrow();
+                }}
+                className="flex-1 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-pop active:scale-95 transition-transform"
+              >
+                Yes, Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MobileShell>
   );
 }

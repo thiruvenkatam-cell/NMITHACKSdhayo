@@ -46,3 +46,35 @@ def get_smart_suggestion(order_type, pickup, drop, priority):
             "fastest_route": "Direct route",
             "reasoning": response.text
         }
+
+def generate_product_emoji(product_name: str) -> str:
+    """
+    Uses Gemini API to generate a single relevant emoji for a given product name.
+    """
+    if not Config.GEMINI_API_KEY:
+        return "📦"
+        
+    try:
+        genai.configure(api_key=Config.GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        prompt = f"""
+        You are an AI assistant for a campus marketplace. 
+        Given the following product name, return exactly ONE highly relevant unicode emoji that represents it.
+        Do not return any other text, just the single emoji character.
+        
+        Product Name: {product_name}
+        Emoji:
+        """
+        
+        response = model.generate_content(prompt)
+        emoji = response.text.strip()
+        
+        # Simple validation: if the response is too long, it's not a single emoji
+        if len(emoji) > 5:
+            return "📦"
+            
+        return emoji if emoji else "📦"
+    except Exception as e:
+        print(f"Error generating emoji: {e}")
+        return "📦"

@@ -22,15 +22,14 @@ export function GlobalFloatingCart() {
           }
         }
       `}</style>
-      <div className="fixed inset-x-0 z-50 mx-auto w-[calc(100%-2rem)] max-w-[448px] md:bottom-8 md:right-8 md:left-auto md:mx-0 md:w-auto md:min-w-[280px]">
+      <div
+        className="fixed inset-x-0 z-50 mx-auto w-[calc(100%-2rem)] max-w-[448px] sm:max-w-[600px] md:right-8 md:left-auto md:mx-0 md:w-auto md:min-w-[280px]"
+        style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <Link
           to="/cart"
           className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-pop"
-          style={{
-            animation: "fade-in-up 0.3s ease-out",
-            // on mobile keep it above bottom nav
-            marginBottom: "calc(4.75rem + env(safe-area-inset-bottom, 0px))",
-          }}
+          style={{ animation: "fade-in-up 0.3s ease-out" }}
         >
           <div className="flex flex-col">
             <span className="text-[11px] font-medium opacity-80">{totalItems} item{totalItems > 1 ? "s" : ""}</span>

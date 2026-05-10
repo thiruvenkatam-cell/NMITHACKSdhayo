@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Sparkles, Clock, MapPin, CheckCircle2, Package, Bike, Navigation, Trophy, Zap, ArrowLeft, TrendingUp } from "lucide-react";
+import { Star, Sparkles, Clock, MapPin, CheckCircle2, Package, Bike, Navigation, Trophy, Zap, ArrowLeft, TrendingUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CourierAvatar } from "./CourierAvatar";
 import { COURIER, MOCK_REQUESTS, BADGES, DELIVERY_HISTORY, type CourierPhase, type DeliveryRequest } from "./CourierData";
+import { socketService } from "@/lib/socket";
+import { api } from "@/lib/api";
 
 const STAGES = [
   { label: "Accepted", icon: CheckCircle2 },
@@ -27,11 +29,66 @@ export function CourierFlow() {
   const [earnings, setEarnings] = useState(COURIER.todayEarnings);
   const [deliveryCount, setDeliveryCount] = useState(12);
   const [xp, setXp] = useState(COURIER.xp);
+  const [requests, setRequests] = useState<DeliveryRequest[]>([]);
+
+  useEffect(() => {
+    // Fetch existing pending orders from the backend
+    api.get("/orders?status=pending&limit=10")
+      .then(res => {
+        if (res.data && res.data.orders) {
+          const liveRequests: DeliveryRequest[] = res.data.orders.map((o: any) => ({
+            id: o.order_id || String(Math.random()),
+            item: o.items?.[0]?.name || "Package",
+            customer: o.requester_id || "Student",
+            pickup: o.pickup_name || o.pickup_location?.name || "Campus Location",
+            drop: o.delivery_location || o.drop_location?.name || "Campus Drop",
+            reward: o.total_amount ? Math.round(Number(o.total_amount) * 0.15) : 20,
+            eta: 10,
+            emoji: "📦",
+            urgency: o.priority === "urgent" ? "HIGH" : "MEDIUM"
+          }));
+          setRequests(liveRequests);
+        }
+      })
+      .catch(err => console.error("Failed to fetch orders", err));
+
+    const socket = socketService.connect();
+    socket.on("new_order", (data: any) => {
+      const newReq: DeliveryRequest = {
+        id: data.order_id,
+        item: "New Order",
+        customer: "Student",
+        pickup: "Campus Store",
+        drop: "Your Location",
+        reward: 20,
+        eta: 10,
+        emoji: "📦",
+        urgency: "HIGH",
+      };
+      setRequests((prev) => {
+        // Prevent duplicates
+        if (prev.find(r => r.id === newReq.id)) return prev;
+        return [newReq, ...prev];
+      });
+      toast.info("🔔 New delivery request nearby!");
+    });
+    return () => {
+      socket.off("new_order");
+    };
+  }, []);
+
+  const handleAccept = (r: DeliveryRequest) => {
+    setActiveRequest(r);
+    setPhase("pickup");
+    toast("📦 Delivery assigned!");
+    const socket = socketService.connect();
+    socket.emit("accept_order", { order_id: r.id, courier_name: COURIER.name });
+  };
 
   return (
     <AnimatePresence mode="wait">
       {phase === "dashboard" && <Dashboard key="dash" earnings={earnings} deliveryCount={deliveryCount} xp={xp} onViewRequests={() => setPhase("requests")} />}
-      {phase === "requests" && <RequestFeed key="req" onAccept={(r) => { setActiveRequest(r); setPhase("pickup"); toast("📦 Delivery assigned!"); }} onBack={() => setPhase("dashboard")} />}
+      {phase === "requests" && <RequestFeed key="req" requests={requests} onAccept={handleAccept} onBack={() => setPhase("dashboard")} />}
       {phase === "pickup" && activeRequest && <PickupScreen key="pick" request={activeRequest} onPickedUp={() => { setPhase("tracking"); toast("🚴 Let's go! Delivery started"); }} onBack={() => setPhase("requests")} />}
       {phase === "tracking" && activeRequest && <CourierTracking key="track" request={activeRequest} onDelivered={() => setPhase("complete")} />}
       {phase === "complete" && activeRequest && <DeliveryComplete key="done" request={activeRequest} onDone={() => { setEarnings(e => e + (activeRequest?.reward ?? 0)); setDeliveryCount(d => d + 1); setXp(x => x + 25); setActiveRequest(null); setPhase("dashboard"); }} />}
@@ -123,13 +180,13 @@ function Dashboard({ earnings, deliveryCount, xp, onViewRequests }: { earnings: 
 }
 
 /* ── REQUEST FEED ── */
-function RequestFeed({ onAccept, onBack }: { onAccept: (r: DeliveryRequest) => void; onBack: () => void }) {
+function RequestFeed({ requests, onAccept, onBack }: { requests: DeliveryRequest[]; onAccept: (r: DeliveryRequest) => void; onBack: () => void }) {
   return (
     <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} className="space-y-3 p-4">
       <button onClick={onBack} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground mb-1"><ArrowLeft className="h-3 w-3" />Back to Dashboard</button>
       <p className="text-lg font-bold">Nearby Requests</p>
       <p className="text-xs text-muted-foreground -mt-2">Accept a delivery to start earning</p>
-      {MOCK_REQUESTS.map((r, i) => (
+      {requests.map((r, i) => (
         <motion.div key={r.id} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }}
           className="rounded-2xl border-2 p-4 shadow-card" style={{
             background: "var(--color-card)",
@@ -172,16 +229,41 @@ function RequestFeed({ onAccept, onBack }: { onAccept: (r: DeliveryRequest) => v
 
 /* ── PICKUP SCREEN ── */
 function PickupScreen({ request, onPickedUp, onBack }: { request: DeliveryRequest; onPickedUp: () => void; onBack: () => void }) {
+  const [storeStatus, setStoreStatus] = useState<"packing" | "ready">("packing");
+  
+  useEffect(() => {
+    // Simulate Dark Store / Canteen Hub packing time (Blinkit style)
+    const t = setTimeout(() => setStoreStatus("ready"), 4000);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-3 p-4">
       <button onClick={onBack} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground mb-1"><ArrowLeft className="h-3 w-3" />Back</button>
+      
+      {storeStatus === "packing" ? (
+        <div className="rounded-2xl border border-warning/50 bg-warning/10 p-4 animate-pulse">
+          <p className="text-sm font-bold text-warning-foreground flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" /> Hub is packing the order...
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">Please wait at {request.pickup} until the order is ready.</p>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-success/50 bg-success/10 p-4">
+          <p className="text-sm font-bold text-success flex items-center gap-2">
+            ✅ Order is ready for pickup!
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">Walk to the counter and collect.</p>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-border p-4 shadow-card" style={{ background: "var(--color-card)" }}>
         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pickup Location</p>
         <div className="mt-2 flex items-center gap-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl" style={{ background: "var(--color-accent)" }}>{request.emoji}</span>
           <div>
             <p className="text-lg font-bold">{request.pickup}</p>
-            <p className="text-xs text-muted-foreground">Walk to the counter and collect</p>
+            <p className="text-xs text-muted-foreground">Canteen Fulfillment Hub</p>
           </div>
         </div>
       </div>
@@ -196,9 +278,12 @@ function PickupScreen({ request, onPickedUp, onBack }: { request: DeliveryReques
         <span className="text-xs font-semibold">Reward</span>
         <span className="text-lg font-bold" style={{ color: "var(--color-success)" }}>₹{request.reward}</span>
       </div>
-      <motion.button whileTap={{ scale: 0.98 }} onClick={onPickedUp}
-        className="w-full rounded-2xl py-3.5 text-sm font-bold shadow-pop" style={{ background: "var(--color-primary)", color: "var(--color-primary-foreground)" }}>
-        ✅ Picked Up — Start Delivery
+      <motion.button 
+        whileTap={storeStatus === "ready" ? { scale: 0.98 } : {}} 
+        onClick={storeStatus === "ready" ? onPickedUp : undefined}
+        disabled={storeStatus === "packing"}
+        className="w-full rounded-2xl py-3.5 text-sm font-bold shadow-pop transition-all disabled:opacity-50" style={{ background: "var(--color-primary)", color: "var(--color-primary-foreground)" }}>
+        {storeStatus === "packing" ? "Waiting for Hub..." : "✅ Picked Up — Start Delivery"}
       </motion.button>
     </motion.div>
   );
@@ -222,14 +307,32 @@ function CourierTracking({ request, onDelivered }: { request: DeliveryRequest; o
       if (stage === 3) toast("📍 Almost there!");
       if (stage === 4) { toast("✅ You've arrived! Deliver the item"); onDelivered(); }
     }
-    setCampusLabel(CAMPUS_LABELS[Math.min(stage, CAMPUS_LABELS.length - 1)]);
-  }, [stage, onDelivered]);
+    const label = CAMPUS_LABELS[Math.min(stage, CAMPUS_LABELS.length - 1)];
+    setCampusLabel(label);
+
+    const socket = socketService.connect();
+    socket.emit('update_courier_stage', {
+      order_id: request.id,
+      stage_index: stage,
+      stage: STAGES[Math.min(stage, STAGES.length - 1)].label,
+      progress: Math.min((stage / 4) * 100, 100),
+      label: label,
+      courier: COURIER.name
+    });
+  }, [stage, onDelivered, request.id]);
 
   useEffect(() => {
     if (stage >= 4) return;
-    const t = setInterval(() => setEta(e => Math.max(0, e - 1)), 3000);
+    const t = setInterval(() => {
+      setEta(e => {
+        const nextEta = Math.max(0, e - 1);
+        const socket = socketService.connect();
+        socket.emit('update_courier_stage', { order_id: request.id, eta: nextEta });
+        return nextEta;
+      });
+    }, 3000);
     return () => clearInterval(t);
-  }, [stage]);
+  }, [stage, request.id]);
 
   const progress = Math.min((stage / 4) * 100, 100);
 
