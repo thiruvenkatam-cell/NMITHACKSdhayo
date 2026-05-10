@@ -17,6 +17,7 @@ function Cart() {
   const [priority, setPriority] = useState<"standard" | "urgent">("standard");
   const [isProcessing, setIsProcessing] = useState(false);
   const [matchStatus, setMatchStatus] = useState<string>("");
+  const [deliveryLocation, setDeliveryLocation] = useState("Room 402, Hostel B");
 
   const subtotal = getSubtotal();
   const platformFee = items.length > 0 ? 5 : 0;
@@ -34,7 +35,7 @@ function Cart() {
         order_type: "canteen_delivery",
         item: itemString,
         pickup_name: "Hostel Canteen",
-        drop_name: "Room 402, Hostel B",
+        drop_name: deliveryLocation,
         priority: priority
       });
       
@@ -138,9 +139,20 @@ function Cart() {
           </div>
           <div className="flex-1">
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Delivering to</p>
-            <p className="text-sm font-semibold mt-0.5">Room 402, Hostel B</p>
+            <p className="text-sm font-semibold mt-0.5">{deliveryLocation}</p>
           </div>
-          <button className="text-xs font-bold text-primary">Change</button>
+          <button 
+            onClick={() => {
+              const newLoc = window.prompt("Enter new delivery location:", deliveryLocation);
+              if (newLoc && newLoc.trim()) {
+                setDeliveryLocation(newLoc.trim());
+                toast.success("Delivery location updated!");
+              }
+            }}
+            className="text-xs font-bold text-primary transition-opacity active:opacity-70"
+          >
+            Change
+          </button>
         </div>
       </div>
 
